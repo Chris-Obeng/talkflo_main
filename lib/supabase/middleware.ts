@@ -38,24 +38,31 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // IMPORTANT: Refreshing the session here ensures the user's session is 
+  // up-to-date and handles token refresh automatically
+  // Do not run code between createServerClient and supabase.auth.getUser()
+  
+  // getUser() automatically handles token refresh, unlike getClaims()
+  const { data, error } = await supabase.auth.getUser();
+  const user = data?.user;
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  // Allow unauthenticated access to landing page and auth pages
+  const publicPaths = ["/", "/landing", "/auth", "/api"];
+  const isPublicPath = publicPaths.some(path => 
+    request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path)
+  );
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Only redirect to auth if user is trying to access protected pages
+  if (!user && !isPublicPath && request.nextUrl.pathname.startsWith("/protected")) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users from auth pages to protected area
+  if (user && request.nextUrl.pathname.startsWith("/auth")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/protected";
     return NextResponse.redirect(url);
   }
 
