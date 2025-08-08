@@ -1,69 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { NoteModal } from "./note-modal";
+import { Tag } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { Note } from "@/lib/types";
+import { useNotes } from "@/lib/hooks/use-notes";
 
-interface Note {
-  id: number;
-  title: string;
-  content: string;
-  date: string;
+interface NotesDashboardProps {
+  onAppendToNote?: (noteId: string) => void;
+  onReady?: (api: {
+    addNote: (note: Note) => void;
+    updateNote: (noteId: string, updated: Partial<Note>) => void;
+    removeNote: (noteId: string) => void;
+    refetch: () => Promise<void>;
+  }) => void;
 }
 
-const sampleNotes: Note[] = [
-  {
-    id: 1,
-    title: "Living Normal Lives Documentary",
-    content: "I'm going to show you how to live normal lives because I'm almost done with the documentary. I'm so proud right now. I can't even talk about church without mentioning Whitebeard from One Piece to a friend who hasn't watched it. Thank you.",
-    date: "Jun 30, 2025"
-  },
-  {
-    id: 2,
-    title: "Appreciation for Your Viewership",
-    content: "Thanks for watching.",
-    date: "Jun 28, 2025"
-  },
-  {
-    id: 3,
-    title: "Appreciation for Viewing",
-    content: "Thanks for watching!",
-    date: "Jun 27, 2025"
-  },
-  {
-    id: 4,
-    title: "Apology and Request to Talk",
-    content: "Hey, I want to talk to you. I'm sorry. I'm really sorry.",
-    date: "Jun 27, 2025"
-  },
-  {
-    id: 5,
-    title: "Welcome Message",
-    content: "Welcome, everyone!",
-    date: "Jun 26, 2025"
-  },
-  {
-    id: 6,
-    title: "Decision Between Walmart and Borba",
-    content: "I tell him it's an easy decision between Walmart and Borba.",
-    date: "Jun 25, 2025"
-  },
-  {
-    id: 7,
-    title: "Reflections on Love and Relationships",
-    content: "Love is a beautiful thing when you find the right person. Sometimes it takes time to understand what you really want in a relationship.",
-    date: "Jun 24, 2025"
-  },
-  {
-    id: 8,
-    title: "Morning Routine Ideas",
-    content: "Starting the day with meditation and a good cup of coffee really sets the tone for productivity. I've been experimenting with different morning routines.",
-    date: "Jun 23, 2025"
-  }
-];
-
-export function NotesDashboard() {
+export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps) {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Use standard client fetching for notes
+  const { 
+    notes, 
+    isLoading: loading, 
+    error: notesError, 
+    refetch: loadNotes,
+    addNote,
+    updateNote,
+    removeNote,
+  } = useNotes({ 
+        limit: 50 // Load most recent 50 notes
+      });
+
+  const error = notesError || '';
 
   const handleNoteClick = (note: Note) => {
     setSelectedNote(note);
@@ -75,47 +46,166 @@ export function NotesDashboard() {
     setSelectedNote(null);
   };
 
-  const handleDeleteNote = (noteId: number) => {
-    // Implementation for deleting note
-    console.log('Delete note:', noteId);
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const success = await apiClient.deleteNote(noteId);
+      if (success) {
+        // Refetch notes to update the UI after delete
+        await loadNotes();
+        handleCloseModal();
+      } else {
+        console.error('Failed to delete note');
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
   };
 
-  const handleDuplicateNote = (noteId: number) => {
-    // Implementation for duplicating note
+  const handleDuplicateNote = (noteId: string) => {
+    // TODO: Implement note duplication
     console.log('Duplicate note:', noteId);
   };
 
-  const handleAppendToNote = (noteId: number) => {
-    // Implementation for appending to note (start recording)
-    console.log('Append to note:', noteId);
+  const handleAppendToNote = (noteId: string) => {
+    // Close modal and start recording
+    handleCloseModal();
+    onAppendToNote?.(noteId);
   };
+
+  // Expose list manipulation API to parent so it can perform
+  // optimistic inserts/updates without remounting the dashboard
+  // (prevents the full "Loading your notes..." reload effect)
+  React.useEffect(() => {
+    onReady?.({
+      addNote,
+      updateNote,
+      removeNote,
+      refetch: loadNotes,
+    });
+  }, [onReady, addNote, updateNote, removeNote, loadNotes]);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center items-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading your notes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="w-full flex justify-center items-center py-12">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-red-600 mb-2">{error}</p>
+          <button 
+            onClick={loadNotes}
+            className="text-orange-500 hover:text-orange-600 underline text-sm"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (notes.length === 0) {
+    return (
+      <div className="w-full flex justify-center items-center py-12">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">No notes yet</h3>
+          <p className="text-gray-500 mb-4">Start by recording your first audio note using the microphone button below.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="w-full">
         <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-          {sampleNotes.map((note) => (
+          {notes.map((note) => (
             <div
               key={note.id} 
               onClick={() => handleNoteClick(note)}
               className="bg-white hover:shadow-lg transition-all duration-300 cursor-pointer rounded-3xl p-8 group break-inside-avoid mb-6 shadow-sm border border-gray-50"
             >
-            {/* Title */}
-            <h3 className="text-xl font-bold text-gray-800 leading-snug mb-4 group-hover:text-gray-900">
-              {note.title}
-            </h3>
-            
-            {/* Content preview */}
-            <p className="text-gray-600 text-base leading-relaxed mb-6 overflow-hidden">
-              {note.content}
-            </p>
-            
-            {/* Date */}
-            <p className="text-gray-400 text-sm font-normal">
-              {note.date}
-            </p>
-          </div>
-        ))}
+              {/* Status indicator for processing notes */}
+              {note.status === 'processing' && (
+                <div className="flex items-center gap-2 mb-4 text-orange-600 text-sm">
+                  <div className="w-3 h-3 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              )}
+              {note.status === 'failed' && (
+                <div className="flex items-center gap-2 mb-4 text-red-600 text-sm">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Processing failed
+                </div>
+              )}
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-gray-800 leading-snug mb-4 group-hover:text-gray-900">
+                {note.title}
+              </h3>
+              
+              {/* Content preview */}
+              <p className="text-gray-600 text-base leading-relaxed mb-4 overflow-hidden line-clamp-4">
+                {note.processed_content || note.original_transcript || 'Processing...'}
+              </p>
+              
+              {/* Tags */}
+              {note.tags && note.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {note.tags.slice(0, 3).map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 text-xs rounded-full border border-orange-100"
+                    >
+                      <Tag className="w-3 h-3" />
+                      {tag.name}
+                    </span>
+                  ))}
+                  {note.tags.length > 3 && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs text-gray-500 font-medium">
+                      +{note.tags.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              {/* Date */}
+              <p className="text-gray-400 text-sm font-normal">
+                {formatDate(note.created_at)}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

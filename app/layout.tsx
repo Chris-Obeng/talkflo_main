@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -9,8 +10,33 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Talkflo - Voice to Text AI",
-  description: "Go from fuzzy thought to clear text. Fast. AI-powered voice-to-text transcription service.",
+  title: {
+    default: "Talkflo - Turn Voice to Text with AI",
+    template: "%s | Talkflo",
+  },
+  description: "Transform your spoken ideas into polished text instantly. Talkflo is an AI-powered voice-to-text transcription service that helps you capture, organize, and write with ease.",
+  keywords: ["voice to text", "transcription", "AI writing", "dictation", "voice notes", "speech to text"],
+  openGraph: {
+    title: "Talkflo - Turn Voice to Text with AI",
+    description: "Transform your spoken ideas into polished text instantly. AI-powered voice-to-text transcription.",
+    url: defaultUrl,
+    siteName: "Talkflo",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Talkflo - Turn Voice to Text with AI",
+    description: "Transform your spoken ideas into polished text instantly. AI-powered voice-to-text transcription.",
+    images: ["/twitter-image.png"],
+  },
 };
 
 const geistSans = Geist({
@@ -33,7 +59,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

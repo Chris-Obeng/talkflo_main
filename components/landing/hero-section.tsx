@@ -60,7 +60,7 @@ export function LandingHero() {
               className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Link href="/auth/sign-up">
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
                   <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
                   <path d="M12 18v4M8 22h8"/>
@@ -68,12 +68,12 @@ export function LandingHero() {
                 Start Recording Free
               </Link>
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               className="border-2 border-slate-300 text-slate-700 px-8 py-4 text-lg font-semibold hover:bg-slate-50"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1M9 16v-4a2 2 0 012-2h2a2 2 0 012 2v4M12 8V6a3 3 0 00-3-3H7a3 3 0 00-3 3v2" />
               </svg>
               Watch Demo
@@ -81,19 +81,19 @@ export function LandingHero() {
           </div>
 
           {/* Hero visual - Recording interface mockup */}
-          <div className="relative max-w-4xl mx-auto">
+          <div className="relative max-w-4xl mx-auto" role="img" aria-label="A mockup of the Talkflo recording interface showing a waveform and transcribed text.">
             <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 p-8">
               <div className="bg-orange-500 rounded-xl p-6 text-white text-center mb-6">
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                    <svg aria-hidden="true" className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
                       <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
                       <path d="M12 18v4M8 22h8"/>
                     </svg>
                   </div>
                 </div>
-                <div className="text-2xl font-bold mb-2">01:23</div>
+                <div className="text-2xl font-bold mb-2" aria-label="Recording time: 1 minute 23 seconds">01:23</div>
                 {/* Animated waveform */}
                 <div className="flex justify-center items-center space-x-1 h-12">
                   {Array.from({ length: 30 }).map((_, i) => (
@@ -114,9 +114,9 @@ export function LandingHero() {
               <div className="bg-stone-50 rounded-lg p-6 text-left">
                 <h3 className="font-semibold text-slate-800 mb-3">Your Perfect Text Output:</h3>
                 <div className="space-y-3 text-slate-600">
-                  <p>"I've been thinking about our marketing strategy for Q2. We should focus on three key areas..."</p>
-                  <p className="opacity-60">"First, we need to improve our content creation process..."</p>
-                  <p className="opacity-40">"Second, let's explore partnership opportunities..."</p>
+                  <p dangerouslySetInnerHTML={{ __html: `"I've been thinking about our marketing strategy for Q2. We should focus on three key areas..."` }} />
+                  <p className="opacity-60" dangerouslySetInnerHTML={{ __html: `"First, we need to improve our content creation process..."` }} />
+                  <p className="opacity-40" dangerouslySetInnerHTML={{ __html: `"Second, let's explore partnership opportunities..."` }} />
                 </div>
               </div>
             </div>

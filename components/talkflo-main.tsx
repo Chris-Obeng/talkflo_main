@@ -2,17 +2,63 @@
 
 import { RecordingWidget, RecordingWidgetRef } from "@/components/recording-widget";
 import { NotesDashboard } from "@/components/notes-dashboard";
+
 import { useState, useRef } from "react";
+import type { Note } from "@/lib/types";
 
 export function TalkfloMain() {
-  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'uploading'>('idle');
+  const [recordingState, setRecordingState] = useState<'idle' | 'preparing' | 'recording' | 'uploading' | 'processing'>('idle');
   const recordingWidgetRef = useRef<RecordingWidgetRef>(null);
+  // Keep a reference to the dashboard list API so we can
+  // optimistically add/update notes without forcing remounts
+  const dashboardApiRef = useRef<{
+    addNote: (note: Note) => void;
+    updateNote: (noteId: string, updated: Partial<Note>) => void;
+    removeNote: (noteId: string) => void;
+    refetch: () => Promise<void>;
+  } | null>(null);
 
-  const handleStartRecording = () => {
-    setRecordingState('recording');
-    // Trigger the recording widget via ref
+  const handleStartRecording = async () => {
+    // Trigger the recording widget; widget will immediately show
+    // a preparing state while it requests permissions
     recordingWidgetRef.current?.startRecording();
+    setRecordingState('recording');
   };
+
+  const handleAppendToNote = (noteId: string) => {
+    // Start recording when appending to a note
+    console.log('Appending to note:', noteId);
+    handleStartRecording();
+  };
+
+  const handleRecordingStateChange = (state: 'idle' | 'preparing' | 'recording' | 'uploading' | 'processing') => {
+    setRecordingState(state);
+  };
+
+  // Handle note creation: perform an optimistic insert so the new
+  // processing note appears instantly without reloading the list
+  const handleNoteCreated = (noteId: string) => {
+    console.log('Note created:', noteId);
+    const now = new Date().toISOString();
+    const optimisticNote: Note = {
+      id: noteId,
+      user_id: 'current', // not used in UI
+      title: 'Processing…',
+      original_transcript: null,
+      processed_content: null,
+      audio_url: null,
+      audio_duration: null,
+      status: 'processing',
+      error_message: null,
+      created_at: now,
+      updated_at: now,
+      tags: [],
+    };
+
+    dashboardApiRef.current?.addNote(optimisticNote);
+  };
+
+
 
   return (
     <div className="min-h-screen relative">
@@ -31,17 +77,28 @@ export function TalkfloMain() {
 
         {/* Recording Widget - shows in center when active */}
         <div className="mb-12 flex justify-center">
-          <RecordingWidget ref={recordingWidgetRef} />
+          <RecordingWidget 
+            ref={recordingWidgetRef} 
+            onStateChange={handleRecordingStateChange}
+            onNoteCreated={handleNoteCreated}
+            onNoteUpdated={(note) => {
+              // Push status/content updates from the poller into the list
+              dashboardApiRef.current?.updateNote(note.id, note);
+            }}
+          />
         </div>
 
         {/* Notes Dashboard */}
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
-          <NotesDashboard />
+          <NotesDashboard 
+            onAppendToNote={handleAppendToNote}
+            onReady={(api) => { dashboardApiRef.current = api; }}
+          />
         </div>
       </div>
 
-      {/* Floating Action Button - Bottom Middle (hide only when recording) */}
-      {recordingState !== 'recording' && (
+      {/* Floating Action Button - Bottom Middle (hide when recording, uploading, or processing) */}
+      {recordingState === 'idle' && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <button
             onClick={handleStartRecording}
