@@ -86,6 +86,31 @@ export class ApiClient {
   }
 
   /**
+   * Rewrite a note using custom instructions
+   */
+  async rewriteNote(noteId: string, instructions: string): Promise<{ success: boolean; note?: Note; error?: string }> {
+    try {
+      const response = await fetch(`/api/notes/${noteId}/rewrite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructions }),
+        credentials: 'include'
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        return { success: false, error: data?.error || 'Rewrite failed' }
+      }
+
+      return { success: true, note: data.note }
+    } catch (error) {
+      console.error('Error rewriting note:', error)
+      return { success: false, error: 'Rewrite failed' }
+    }
+  }
+
+  /**
    * Get all notes for current user
    */
   async getNotes(options?: {

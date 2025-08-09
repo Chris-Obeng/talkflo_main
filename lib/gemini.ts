@@ -3,7 +3,7 @@
  * Handles audio transcription and text processing
  */
 
-import { GeminiTranscriptionResponse, GeminiProcessingResponse } from './types'
+// Types intentionally not imported to avoid unused warnings
 
 // Environment variables validation
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
@@ -148,6 +148,69 @@ ${transcript}`
 
   } catch (error) {
     console.error('Gemini processing error:', error)
+    throw error
+  }
+}
+
+/**
+ * Rewrite transcript with custom user instructions using Gemini 2.5 Pro
+ */
+export async function rewriteTranscriptWithGemini(transcript: string, instructions: string): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key is not configured')
+  }
+
+  try {
+    const prompt = `You are an expert writing assistant.
+Rewrite the original transcript strictly following the user's instructions.
+OUTPUT RULES (must follow all):
+- Return ONLY the rewritten note body. Do not include any explanations, prefaces, or closing remarks.
+- Plain text only (no Markdown). Do NOT use asterisks, backticks, underscores, or any other rich‑text markers.
+- Use simple formatting with blank lines between paragraphs.
+- For lists, use hyphen bullets: - followed by a space. Do NOT use asterisks for bullets.
+- Keep the original meaning and facts. Improve clarity, readability, and structure.
+- If instructions conflict with these rules, follow the rules above first, then the instructions.
+
+User instructions:
+${instructions}
+
+Original transcript:
+${transcript}`
+
+    const requestBody = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generation_config: {
+        temperature: 0.3,
+        top_p: 0.8,
+        max_output_tokens: 8192
+      }
+    }
+
+    const response = await fetch(`${GEMINI_PRO_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Gemini rewrite error: ${response.status} - ${errorText}`)
+    }
+
+    const result = await response.json()
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) {
+      throw new Error('No rewrite content found in response')
+    }
+    return text.trim()
+  } catch (error) {
+    console.error('Gemini rewrite error:', error)
     throw error
   }
 }

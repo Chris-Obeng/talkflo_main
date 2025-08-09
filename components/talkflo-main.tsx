@@ -13,6 +13,7 @@ export function TalkfloMain() {
   // optimistically add/update notes without forcing remounts
   const dashboardApiRef = useRef<{
     addNote: (note: Note) => void;
+    upsertNote: (note: Note, placeAtTopIfNew?: boolean) => void;
     updateNote: (noteId: string, updated: Partial<Note>) => void;
     removeNote: (noteId: string) => void;
     refetch: () => Promise<void>;
@@ -39,23 +40,8 @@ export function TalkfloMain() {
   // processing note appears instantly without reloading the list
   const handleNoteCreated = (noteId: string) => {
     console.log('Note created:', noteId);
-    const now = new Date().toISOString();
-    const optimisticNote: Note = {
-      id: noteId,
-      user_id: 'current', // not used in UI
-      title: 'Processing…',
-      original_transcript: null,
-      processed_content: null,
-      audio_url: null,
-      audio_duration: null,
-      status: 'processing',
-      error_message: null,
-      created_at: now,
-      updated_at: now,
-      tags: [],
-    };
-
-    dashboardApiRef.current?.addNote(optimisticNote);
+    // Do not insert a processing placeholder anymore.
+    // The card will appear only when processing completes and content is ready.
   };
 
 
@@ -83,7 +69,15 @@ export function TalkfloMain() {
             onNoteCreated={handleNoteCreated}
             onNoteUpdated={(note) => {
               // Push status/content updates from the poller into the list
-              dashboardApiRef.current?.updateNote(note.id, note);
+              if (note.status === 'completed') {
+                // Insert the completed note smoothly at the top and ensure
+                // we have the freshest version from the server if needed
+                dashboardApiRef.current?.upsertNote(note, true);
+              } else if (note.status === 'failed') {
+                // No card until completed; ignore failed interim updates
+              } else {
+                // Still processing: keep dashboard unchanged
+              }
             }}
           />
         </div>

@@ -6,11 +6,13 @@ import { Tag } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { Note } from "@/lib/types";
 import { useNotes } from "@/lib/hooks/use-notes";
+import { useToast } from "@/components/ui/toast";
 
 interface NotesDashboardProps {
   onAppendToNote?: (noteId: string) => void;
   onReady?: (api: {
     addNote: (note: Note) => void;
+    upsertNote: (note: Note, placeAtTopIfNew?: boolean) => void;
     updateNote: (noteId: string, updated: Partial<Note>) => void;
     removeNote: (noteId: string) => void;
     refetch: () => Promise<void>;
@@ -20,6 +22,7 @@ interface NotesDashboardProps {
 export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps) {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { addToast } = useToast();
 
   // Use standard client fetching for notes
   const { 
@@ -28,6 +31,7 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
     error: notesError, 
     refetch: loadNotes,
     addNote,
+    upsertNote,
     updateNote,
     removeNote,
   } = useNotes({ 
@@ -41,23 +45,42 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = async () => {
     setIsModalOpen(false);
     setSelectedNote(null);
   };
 
+  // Keep the list in sync when modal updates tags, without refetching
+  const handleTagsUpdate = (noteId: string, nextTags: Note['tags']) => {
+    updateNote(noteId, { tags: nextTags || [] });
+  };
+
   const handleDeleteNote = async (noteId: string) => {
+    // Optimistic UI: remove immediately
+    const deletedNote = notes.find((n) => n.id === noteId) || null;
+    removeNote(noteId);
+    if (selectedNote?.id === noteId) {
+      setIsModalOpen(false);
+      setSelectedNote(null);
+    }
+
     try {
       const success = await apiClient.deleteNote(noteId);
       if (success) {
-        // Refetch notes to update the UI after delete
-        await loadNotes();
-        handleCloseModal();
+        addToast({ type: 'success', title: 'Note deleted' });
       } else {
-        console.error('Failed to delete note');
+        // Rollback on failure
+        if (deletedNote) {
+          upsertNote(deletedNote, true);
+        }
+        addToast({ type: 'error', title: 'Failed to delete note', description: 'Please try again.' });
       }
     } catch (error) {
       console.error('Error deleting note:', error);
+      if (deletedNote) {
+        upsertNote(deletedNote, true);
+      }
+      addToast({ type: 'error', title: 'Error deleting note', description: 'Please try again.' });
     }
   };
 
@@ -78,11 +101,13 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
   React.useEffect(() => {
     onReady?.({
       addNote,
+      upsertNote,
+      // expose upsert as well for smooth insert at top
       updateNote,
       removeNote,
       refetch: loadNotes,
     });
-  }, [onReady, addNote, updateNote, removeNote, loadNotes]);
+  }, [onReady, addNote, upsertNote, updateNote, removeNote, loadNotes]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -92,6 +117,15 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
       day: 'numeric' 
     });
   };
+
+  // Ensure notes are displayed newest-first regardless of layout side-effects
+  const displayNotes = React.useMemo(() => {
+    return [...notes].sort((a, b) => {
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+      return bTime - aTime;
+    });
+  }, [notes]);
 
   // Loading state
   if (loading) {
@@ -147,12 +181,12 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
   return (
     <>
       <div className="w-full">
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-          {notes.map((note) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {displayNotes.map((note) => (
             <div
               key={note.id} 
               onClick={() => handleNoteClick(note)}
-              className="bg-white hover:shadow-lg transition-all duration-300 cursor-pointer rounded-3xl p-8 group break-inside-avoid mb-6 shadow-sm border border-gray-50"
+              className="bg-white hover:shadow-lg transition-all duration-300 cursor-pointer rounded-3xl p-8 group shadow-sm border border-gray-50"
             >
               {/* Status indicator for processing notes */}
               {note.status === 'processing' && (
@@ -217,6 +251,8 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
         onDelete={handleDeleteNote}
         onDuplicate={handleDuplicateNote}
         onAppendToNote={handleAppendToNote}
+        onTagsUpdate={handleTagsUpdate}
+        onNoteUpdate={(id, updated) => updateNote(id, updated)}
       />
     </>
   );

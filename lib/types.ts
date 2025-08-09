@@ -12,7 +12,7 @@ export interface Note {
   error_message?: string | null
   created_at: string
   updated_at: string
-  tags?: Tag[]
+  tags?: UITag[]
 }
 
 export interface Tag {
@@ -22,6 +22,13 @@ export interface Tag {
   color?: string | null
   created_at: string
   usage_count?: number
+}
+
+// Minimal tag shape used when embedded in a note fetch (via join)
+export interface UITag {
+  id: string
+  name: string
+  color?: string | null
 }
 
 export interface NoteTag {

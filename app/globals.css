@@ -66,3 +66,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Prevent layout shift when toggling modal/body overflow by reserving scrollbar gutter */
+html {
+  scrollbar-gutter: stable;
+}

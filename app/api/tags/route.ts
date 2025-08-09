@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
+
     // Validate user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -16,40 +16,49 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch tags with usage counts
+    // Step 1: Fetch user's tags (no joins to avoid PostgREST aggregate quirks)
     const { data: tags, error: tagsError } = await supabase
       .from('tags')
-      .select(`
-        *,
-        note_tags (count)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (tagsError) {
-      console.error('Database error:', tagsError)
+      console.error('Database error (tags):', tagsError)
       return NextResponse.json(
         { error: 'Failed to fetch tags' },
         { status: 500 }
       )
     }
 
-    // Format tags with usage counts
-    const formattedTags = tags.map(tag => ({
-      ...tag,
-      usage_count: tag.note_tags?.length || 0
+    if (!tags || tags.length === 0) {
+      return NextResponse.json({ success: true, tags: [] })
+    }
+
+    // Step 2: Fetch related note_tags rows for these tag ids and compute counts
+    const tagIds = tags.map((t) => t.id)
+    const { data: noteTags, error: noteTagsError } = await supabase
+      .from('note_tags')
+      .select('tag_id')
+      .in('tag_id', tagIds)
+
+    if (noteTagsError) {
+      // If counting fails for any reason, still return the tags without usage counts
+      console.warn('Warning: failed to fetch note_tag counts. Returning tags without usage counts.', noteTagsError)
+      return NextResponse.json({ success: true, tags })
+    }
+
+    const usageCountByTagId: Record<string, number> = {}
+    for (const rel of noteTags || []) {
+      usageCountByTagId[rel.tag_id] = (usageCountByTagId[rel.tag_id] || 0) + 1
+    }
+
+    const formattedTags = tags.map((t) => ({
+      ...t,
+      usage_count: usageCountByTagId[t.id] || 0,
     }))
 
-    // Remove note_tags property
-    formattedTags.forEach(tag => {
-      delete (tag as any).note_tags
-    })
-
-    return NextResponse.json({
-      success: true,
-      tags: formattedTags
-    })
-
+    return NextResponse.json({ success: true, tags: formattedTags })
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json(
@@ -104,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Check if tag name already exists for this user
     const { data: existingTag, error: checkError } = await supabase
       .from('tags')
-      .select('id')
+      .select('*')
       .eq('user_id', user.id)
       .eq('name', name.trim())
       .single()
@@ -118,10 +127,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingTag) {
-      return NextResponse.json(
-        { error: 'A tag with this name already exists' },
-        { status: 409 }
-      )
+      // Make tag creation idempotent: return the existing tag as a success.
+      return NextResponse.json({
+        success: true,
+        message: 'Tag already exists',
+        tag: {
+          ...existingTag,
+          usage_count: undefined
+        }
+      })
     }
 
     // Create new tag

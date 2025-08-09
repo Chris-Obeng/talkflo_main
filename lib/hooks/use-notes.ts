@@ -67,9 +67,10 @@ export function useNotes(options: UseNotesOptions = {}) {
       }
 
       // Transform the data to match our Note type
-      const notesData: Note[] = (data || []).map((note: any) => ({
+      type RawNote = Omit<Note, 'tags'> & { note_tags?: { tags: { id: string; name: string; color?: string | null } }[] }
+      const notesData: Note[] = ((data as unknown as RawNote[]) || []).map((note) => ({
         ...note,
-        tags: note.note_tags?.map((nt: any) => nt.tags) || []
+        tags: (note.note_tags || []).map((nt) => nt.tags) || []
       }))
 
       // Filter by tags if specified (client-side filtering for tag names)
@@ -94,9 +95,20 @@ export function useNotes(options: UseNotesOptions = {}) {
     fetchNotes()
   }, [fetchNotes])
 
-  // Manually add a new note to the state (for optimistic updates)
+  // Manually add a new note to the start of the list
   const addNote = useCallback((newNote: Note) => {
-    setNotes(currentNotes => [newNote, ...currentNotes])
+    setNotes(currentNotes => [newNote, ...currentNotes.filter(n => n.id !== newNote.id)])
+  }, [])
+
+  // Insert at top if not present, otherwise update in place
+  const upsertNote = useCallback((newNote: Note, placeAtTopIfNew: boolean = true) => {
+    setNotes(currentNotes => {
+      const exists = currentNotes.some(n => n.id === newNote.id)
+      if (exists) {
+        return currentNotes.map(n => (n.id === newNote.id ? { ...n, ...newNote } : n))
+      }
+      return placeAtTopIfNew ? [newNote, ...currentNotes] : [...currentNotes, newNote]
+    })
   }, [])
 
   // Manually update a note in the state
@@ -121,6 +133,7 @@ export function useNotes(options: UseNotesOptions = {}) {
     error,
     refetch: fetchNotes,
     addNote,
+    upsertNote,
     updateNote,
     removeNote
   }

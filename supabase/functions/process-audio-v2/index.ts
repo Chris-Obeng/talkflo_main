@@ -214,11 +214,11 @@ SENTIMENT PRESERVATION:
 - Keep personal expressions and unique language patterns
 
 FORMATTING GUIDELINES:
-- Use markdown formatting for better readability
-- Create appropriate headings and sections
-- Use bullet points for key information and lists
-- Include a brief summary at the end if the content is substantial
-- Ensure proper paragraph breaks and white space for scanning
+- Return ONLY the cleaned note content. Do not include any preface, explanation, labels, or headings like "Cleaned Transcript", "Transcript", "Title:", "Summary:", etc.
+- Do NOT add an overall document title at the top; start directly with the body content.
+- Use simple markdown within the body when it improves readability (e.g., bullet points, short section headings), but avoid decorative wrappers or leading/trailing asterisks.
+- Do NOT wrap the response in quotes or code fences.
+- Ensure proper paragraph breaks and white space for scanning.
 
 COMMON PITFALLS TO AVOID:
 - Over-editing that loses the speaker's authentic voice
@@ -288,12 +288,16 @@ async function generateTitle(content: string): Promise<string> {
   try {
     console.log('📝 Generating title...')
     
-    const prompt = `Based on the following content, generate a concise, descriptive title (maximum 60 characters). The title should capture the main topic or theme of the content.
+    const prompt = `You will receive the cleaned body of a note. Generate a concise, descriptive title (max 60 characters).
 
-Content:
+Rules:
+- Return ONLY the title text. Do not include quotes, labels, punctuation wrappers, or extra lines.
+- Make it specific, not generic. Prefer keywords from the note.
+
+Content body:
 ${content.substring(0, 1000)}...
 
-Please respond with only the title, no additional text or formatting.`
+Respond with ONLY the title.`
 
     const requestBody = {
       contents: [{
