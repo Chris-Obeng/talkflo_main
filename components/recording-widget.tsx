@@ -6,13 +6,15 @@ import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
 import { useNoteProcessingStatus } from "@/lib/hooks/use-note";
 import { AudioVisualizer } from "@/components/audio-visualizer";
+import { AudioUpload } from "@/components/audio-upload";
 import type { Note } from "@/lib/types";
 
-type RecordingState = 'idle' | 'uploading' | 'recording' | 'paused' | 'processing';
+type RecordingState = 'idle' | 'uploading' | 'recording' | 'paused' | 'processing' | 'file-uploading';
 
 export interface RecordingWidgetRef {
   startRecording: () => void;
   setAppendToNoteId: (noteId: string | undefined) => void;
+  showUploadDialog: () => void;
 }
 
 interface RecordingWidgetProps {
@@ -33,6 +35,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [uploadAbortController, setUploadAbortController] = useState<AbortController | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
   
   // Use standard client polling for note processing status
   const { note: processingNote, isCompleted, hasFailed, isProcessing } = useNoteProcessingStatus(currentNoteId);
@@ -181,24 +184,21 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       const abortController = new AbortController();
       setUploadAbortController(abortController);
 
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // Upload audio to backend
+      // Upload audio to backend with real progress tracking
       const currentAppendToNoteId = appendToNoteIdRef.current;
       console.log('📤 Uploading audio to backend...', currentAppendToNoteId ? `appending to note: ${currentAppendToNoteId}` : 'creating new note');
       console.log('📤 appendToNoteId value from ref:', currentAppendToNoteId);
-      const result = await apiClient.uploadAudio(audioBlob, 'recording.wav', currentAppendToNoteId, abortController.signal);
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+      
+      const result = await apiClient.uploadAudio(
+        audioBlob, 
+        'recording.wav', 
+        currentAppendToNoteId, 
+        abortController.signal,
+        (progress) => {
+          // Real-time progress updates from XMLHttpRequest
+          setUploadProgress(progress);
+        }
+      );
       
       // Clear abort controller after successful upload
       setUploadAbortController(null);
@@ -301,6 +301,9 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       appendToNoteIdRef.current = noteId;
       console.log('🎤 appendToNoteIdRef set via ref to:', noteId);
     },
+    showUploadDialog: () => {
+      setShowUpload(true);
+    },
   }));
 
   const stopRecording = () => {
@@ -356,6 +359,116 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     });
   };
 
+  // File upload handlers
+  const handleFileUploadStart = () => {
+    console.log('📤 File upload started');
+    setRecordingState('file-uploading');
+    setUploadProgress(0);
+  };
+
+  const handleFileUploadProgress = (progress: number) => {
+    setUploadProgress(progress);
+  };
+
+  const handleFileUploadComplete = (noteId: string) => {
+    console.log('📤 File upload completed:', noteId);
+    setRecordingState('processing');
+    setCurrentNoteId(noteId);
+    setShowUpload(false);
+    
+    addToast({
+      type: 'info',
+      title: 'Processing Started',
+      description: 'AI is transcribing and enhancing your audio file...'
+    });
+    
+    // Notify parent component that a note was created
+    onNoteCreated?.(noteId);
+  };
+
+  const handleFileUploadError = (error: string) => {
+    console.error('📤 File upload error:', error);
+    setRecordingState('idle');
+    setShowUpload(false);
+  };
+
+  const handleFileUploadCancel = () => {
+    console.log('📤 File upload canceled');
+    setRecordingState('idle');
+    setShowUpload(false);
+  };
+
+  // Upload dialog state
+  if (showUpload && recordingState === 'idle') {
+    return (
+      <div className="flex justify-center">
+        <div className="bg-white rounded-3xl px-12 py-8 w-96 shadow-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Upload Audio File</h3>
+            <button
+              onClick={() => setShowUpload(false)}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <AudioUpload
+            onUploadStart={handleFileUploadStart}
+            onUploadProgress={handleFileUploadProgress}
+            onUploadComplete={handleFileUploadComplete}
+            onUploadError={handleFileUploadError}
+            onUploadCancel={handleFileUploadCancel}
+            appendToNoteId={appendToNoteIdRef.current}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // File uploading state
+  if (recordingState === 'file-uploading') {
+    return (
+      <div className="flex justify-center">
+        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+          {/* Loading dots */}
+          <div className="flex justify-center mb-6 space-x-2">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+          </div>
+          
+          {/* Upload progress */}
+          <div className="text-xl font-normal mb-4">
+            Uploading file... {uploadProgress}%
+          </div>
+          
+          {/* Progress bar */}
+          <div className="w-full bg-white/20 rounded-full h-2 mb-6">
+            <div 
+              className="bg-white h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
+          </div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="text-red-200 text-sm mb-4">{error}</div>
+          )}
+          
+          {/* Cancel link */}
+          <button 
+            onClick={handleFileUploadCancel}
+            className="text-white underline hover:no-underline transition-all text-sm font-light"
+          >
+            cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Idle state - no widget shown (floating button handles this)
   if (recordingState === 'idle') {
     return null;
@@ -406,7 +519,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   if (recordingState === 'processing') {
     return (
       <div className="flex justify-center">
-        <div className="bg-blue-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
           {/* Processing animation */}
           <div className="flex justify-center mb-6">
             <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>

@@ -11,7 +11,13 @@ export class ApiClient {
   /**
    * Upload audio file and create note or append to existing note
    */
-  async uploadAudio(audioBlob: Blob, fileName: string = 'recording.wav', appendToNoteId?: string, abortSignal?: AbortSignal): Promise<{ success: boolean; noteId?: string; error?: string }> {
+  async uploadAudio(
+    audioBlob: Blob, 
+    fileName: string = 'recording.wav', 
+    appendToNoteId?: string, 
+    abortSignal?: AbortSignal,
+    onProgress?: (progress: number) => void
+  ): Promise<{ success: boolean; noteId?: string; error?: string }> {
     try {
       console.log('🔐 Checking authentication...');
       // Get current user
@@ -36,54 +42,95 @@ export class ApiClient {
       }
       console.log('📦 Created form data with audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type, 'filename:', properFileName, appendToNoteId ? `appending to note: ${appendToNoteId}` : 'creating new note');
 
-      // Upload to API (include credentials for cookie-based auth)
+      // Use XMLHttpRequest for real upload progress tracking
       console.log('📤 Sending upload request to /api/upload-audio...');
-      const response = await fetch('/api/upload-audio', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Important: Include cookies for authentication
-        signal: abortSignal, // Add abort signal for cancellation
-      })
-
-      console.log('📤 Upload response status:', response.status);
-
-      if (!response.ok) {
-        let errorDetails;
-        try {
-          const errorText = await response.text();
-          console.error('📤 Raw error response:', errorText);
-          
-          // Try to parse as JSON
-          try {
-            errorDetails = JSON.parse(errorText);
-          } catch {
-            errorDetails = { error: errorText || `HTTP ${response.status}: ${response.statusText}` };
-          }
-        } catch (readError) {
-          console.error('📤 Failed to read error response:', readError);
-          errorDetails = { error: `HTTP ${response.status}: ${response.statusText}` };
+      
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Handle abort signal
+        if (abortSignal) {
+          abortSignal.addEventListener('abort', () => {
+            xhr.abort();
+          });
         }
         
-        console.error('📤 Upload API error:', errorDetails);
-        throw new Error(errorDetails.error || `Upload failed with status ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('📤 Upload success:', data);
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable && onProgress) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            console.log('📤 Upload progress:', progress + '%');
+            onProgress(progress);
+          }
+        });
+        
+        // Handle completion
+        xhr.addEventListener('load', () => {
+          console.log('📤 Upload response status:', xhr.status);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              console.log('📤 Upload success:', data);
+              
+              if (!data.noteId) {
+                reject(new Error('API did not return a noteId'));
+                return;
+              }
+              
+              resolve({
+                success: true,
+                noteId: data.noteId
+              });
+            } catch (parseError) {
+              console.error('📤 Failed to parse response:', parseError);
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            let errorDetails;
+            try {
+              const errorText = xhr.responseText;
+              console.error('📤 Raw error response:', errorText);
+              
+              // Try to parse as JSON
+              try {
+                errorDetails = JSON.parse(errorText);
+              } catch {
+                errorDetails = { error: errorText || `HTTP ${xhr.status}: ${xhr.statusText}` };
+              }
+            } catch (readError) {
+              console.error('📤 Failed to read error response:', readError);
+              errorDetails = { error: `HTTP ${xhr.status}: ${xhr.statusText}` };
+            }
+            
+            console.error('📤 Upload API error:', errorDetails);
+            reject(new Error(errorDetails.error || `Upload failed with status ${xhr.status}`));
+          }
+        });
+        
+        // Handle network errors
+        xhr.addEventListener('error', () => {
+          console.error('📤 Upload network error');
+          reject(new Error('Network error during upload'));
+        });
+        
+        // Handle abort
+        xhr.addEventListener('abort', () => {
+          console.log('📤 Upload aborted');
+          reject(new Error('Upload canceled'));
+        });
+        
+        // Configure and send request
+        xhr.open('POST', '/api/upload-audio');
+        xhr.withCredentials = true; // Include cookies for authentication
+        xhr.send(formData);
+      });
       
-      if (!data.noteId) {
-        throw new Error('API did not return a noteId')
-      }
-
-      return {
-        success: true,
-        noteId: data.noteId
-      }
     } catch (error) {
       console.error('📤 Upload error:', error)
       
       // Handle abort error specifically
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Upload canceled')) {
         return {
           success: false,
           error: 'Upload canceled'

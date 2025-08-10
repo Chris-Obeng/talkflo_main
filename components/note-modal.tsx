@@ -13,6 +13,7 @@ interface NoteModalProps {
   onDelete?: (noteId: string) => void;
   onDuplicate?: (noteId: string) => void;
   onAppendToNote?: (noteId: string) => void;
+  onAppendFileToNote?: (noteId: string) => void;
   onTagsUpdate?: (noteId: string, tags: UITag[]) => void;
   onNoteUpdate?: (noteId: string, updated: Partial<Note>) => void;
 }
@@ -24,6 +25,7 @@ export function NoteModal({
   onDelete, 
   onDuplicate, 
   onAppendToNote, 
+  onAppendFileToNote,
   onTagsUpdate,
   onNoteUpdate
 }: NoteModalProps) {
@@ -139,6 +141,14 @@ export function NoteModal({
     handleClose(); // Close modal first
     setTimeout(() => {
       onAppendToNote?.(note.id); // Then trigger recording
+    }, 100); // Small delay to allow modal close animation
+  };
+
+  const handleAppendFileClick = () => {
+    if (!note) return;
+    handleClose(); // Close modal first
+    setTimeout(() => {
+      onAppendFileToNote?.(note.id); // Then trigger file upload
     }, 100); // Small delay to allow modal close animation
   };
 
@@ -766,14 +776,23 @@ export function NoteModal({
               </div>
             )}
 
-            {/* Append to Note Button */}
-            <div className={`flex justify-center mb-8 ${isFullScreen ? 'hidden' : ''}`}>
+            {/* Append to Note Buttons */}
+            <div className={`flex justify-center gap-3 mb-8 ${isFullScreen ? 'hidden' : ''}`}>
               <button
                 onClick={handleAppendClick}
                 className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg hover:shadow-xl"
               >
                 <Mic className="w-4 h-4" />
-                Append to note
+                Record & Append
+              </button>
+              <button
+                onClick={handleAppendFileClick}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors shadow-lg hover:shadow-xl"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload & Append
               </button>
             </div>
 
@@ -881,13 +900,22 @@ export function NoteModal({
               <div className="mt-auto bg-gradient-to-t from-gray-50/80 to-transparent border-t border-gray-100/50 backdrop-blur-sm">
                 <div className="px-8 lg:px-32 py-6">
                   {/* Action Buttons Row */}
-                  <div className="flex items-center justify-center gap-6 mb-4">
+                  <div className="flex items-center justify-center gap-4 mb-4">
                     <button
                       onClick={handleAppendClick}
                       className="flex items-center gap-3 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
                     >
                       <Mic className="w-4 h-4" />
-                      Append to note
+                      Record & Append
+                    </button>
+                    <button
+                      onClick={handleAppendFileClick}
+                      className="flex items-center gap-3 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Upload & Append
                     </button>
                     
                     <div className="flex gap-3">

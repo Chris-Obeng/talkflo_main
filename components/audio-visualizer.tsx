@@ -14,7 +14,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   className = ""
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
@@ -41,7 +41,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       
       // Create data array for frequency data
       const bufferLength = analyser.frequencyBinCount;
-      dataArrayRef.current = new Uint8Array(bufferLength);
+      dataArrayRef.current = new Uint8Array(new ArrayBuffer(bufferLength));
       
       console.log('🎵 Audio visualizer initialized');
     } catch (error) {
@@ -60,7 +60,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     const dataArray = dataArrayRef.current;
     
     // Get frequency data
-    analyser.getByteFrequencyData(dataArray);
+    (analyser as any).getByteFrequencyData(dataArray);
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
