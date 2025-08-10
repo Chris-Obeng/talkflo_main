@@ -8,6 +8,7 @@ import type { Note } from "@/lib/types";
 
 export function TalkfloMain() {
   const [recordingState, setRecordingState] = useState<'idle' | 'preparing' | 'recording' | 'uploading' | 'processing'>('idle');
+  const [hasSelectedNotes, setHasSelectedNotes] = useState(false);
   const recordingWidgetRef = useRef<RecordingWidgetRef>(null);
   // Keep a reference to the dashboard list API so we can
   // optimistically add/update notes without forcing remounts
@@ -17,6 +18,10 @@ export function TalkfloMain() {
     updateNote: (noteId: string, updated: Partial<Note>) => void;
     removeNote: (noteId: string) => void;
     refetch: () => Promise<void>;
+  } | null>(null);
+  const dashboardActionsRef = useRef<{
+    deleteSelected: () => void;
+    clearSelection: () => void;
   } | null>(null);
 
   const handleStartRecording = async () => {
@@ -52,7 +57,7 @@ export function TalkfloMain() {
       <div className="pt-12 pb-2 w-full max-w-none">
         {/* Main Branding - exactly like AudioPen */}
         <div className="text-center mb-12 mt-12">
-          <h1 className="text-7xl font-serif text-gray-600 mb-3 tracking-tight font-normal">
+          <h1 className="text-5xl sm:text-6xl font-serif text-gray-600 mb-3 tracking-tight font-normal">
             Talkflo
           </h1>
           <div className="w-12 h-0.5 bg-orange-500 mx-auto mb-6"></div>
@@ -86,22 +91,68 @@ export function TalkfloMain() {
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <NotesDashboard 
             onAppendToNote={handleAppendToNote}
-            onReady={(api) => { dashboardApiRef.current = api; }}
+            onReady={(api) => {
+              dashboardApiRef.current = api;
+              dashboardActionsRef.current = {
+                deleteSelected: api.deleteSelected,
+                clearSelection: api.clearSelection,
+              };
+            }}
+            onSelectionChange={(count) => setHasSelectedNotes(count > 0)}
           />
         </div>
       </div>
 
       {/* Floating Action Button - Bottom Middle (hide when recording, uploading, or processing) */}
       {recordingState === 'idle' && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+        <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300 ${hasSelectedNotes ? 'opacity-0' : 'opacity-100'}`}>
           <button
             onClick={handleStartRecording}
             className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl flex items-center justify-center group"
+            tabIndex={hasSelectedNotes ? -1 : 0}
           >
             <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* Floating Action Buttons for Selection */}
+      {hasSelectedNotes && (
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-stone-200/50 p-2 flex gap-2">
+            <button
+              onClick={() => dashboardActionsRef.current?.deleteSelected()}
+              className="group flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+            >
+              <svg 
+                className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-12 transition-transform duration-200" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Delete</span>
+            </button>
+            <button
+              onClick={() => dashboardActionsRef.current?.clearSelection()}
+              className="group flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 hover:text-stone-800 rounded-xl text-sm sm:text-base font-semibold border border-stone-300/50 transition-all duration-200 shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+            >
+              <svg 
+                className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-300" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>Clear</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

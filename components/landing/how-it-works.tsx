@@ -1,6 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 export function HowItWorks() {
+  const [waveformHeights, setWaveformHeights] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Generate consistent heights on client side only
+    const heights = Array.from({ length: 20 }, () => Math.random() * 30 + 10);
+    setWaveformHeights(heights);
+  }, []);
   const steps = [
     {
       number: "01",
@@ -50,17 +59,28 @@ export function HowItWorks() {
           </div>
           {/* Waveform animation */}
           <div className="flex justify-center items-center space-x-1 h-12">
-            {Array.from({ length: 20 }).map((_, i) => (
+            {waveformHeights.length > 0 ? waveformHeights.map((height, i) => (
               <div
                 key={i}
                 className="w-1 bg-white/60 rounded-full animate-pulse"
                 style={{
-                  height: `${Math.random() * 30 + 10}px`,
+                  height: `${height}px`,
                   animationDelay: `${i * 0.1}s`,
                   animationDuration: '1.5s'
                 }}
               />
-            ))}
+            )) : (
+              // Fallback static bars for SSR
+              Array.from({ length: 20 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-white/60 rounded-full"
+                  style={{
+                    height: '20px'
+                  }}
+                />
+              ))
+            )}
           </div>
         </div>
       )

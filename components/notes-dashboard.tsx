@@ -16,12 +16,16 @@ interface NotesDashboardProps {
     updateNote: (noteId: string, updated: Partial<Note>) => void;
     removeNote: (noteId: string) => void;
     refetch: () => Promise<void>;
+    deleteSelected: () => void;
+    clearSelection: () => void;
   }) => void;
+  onSelectionChange?: (count: number) => void;
 }
 
-export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps) {
+export function NotesDashboard({ onAppendToNote, onReady, onSelectionChange }: NotesDashboardProps) {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const { addToast } = useToast();
 
   // Use standard client fetching for notes
@@ -40,15 +44,40 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
 
   const error = notesError || '';
 
-  const handleNoteClick = (note: Note) => {
+  const handleNoteClick = (note: Note, e: React.MouseEvent) => {
+    const isCheckboxClick = !!(e.target as HTMLElement).closest('.note-checkbox');
+
+    if (selectedNoteIds.length > 0) {
+      // If selection mode is active, any click on the card toggles selection
+      handleCheckboxChange(note.id, !selectedNoteIds.includes(note.id));
+      return;
+    }
+
+    // If not in selection mode, only checkbox clicks should select
+    if (isCheckboxClick) {
+      handleCheckboxChange(note.id, !selectedNoteIds.includes(note.id));
+      return;
+    }
+
+    // Otherwise, open the modal
     setSelectedNote(note);
     setIsModalOpen(true);
+  };
+
+  const handleCheckboxChange = (noteId: string, isChecked: boolean) => {
+    setSelectedNoteIds(prev =>
+      isChecked ? [...prev, noteId] : prev.filter(id => id !== noteId)
+    );
   };
 
   const handleCloseModal = async () => {
     setIsModalOpen(false);
     setSelectedNote(null);
   };
+
+  React.useEffect(() => {
+    onSelectionChange?.(selectedNoteIds.length);
+  }, [selectedNoteIds, onSelectionChange]);
 
   // Keep the list in sync when modal updates tags, without refetching
   const handleTagsUpdate = (noteId: string, nextTags: Note['tags']) => {
@@ -84,6 +113,33 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedNoteIds.length === 0) return;
+    if (window.confirm(`Are you sure you want to delete ${selectedNoteIds.length} selected notes?`)) {
+      const originalNotes = [...notes];
+      // Optimistic UI update
+      // This is a bit of a hack, ideally useNotes would have a setNotes
+      // For now, we'll just remove them one by one
+      selectedNoteIds.forEach(id => removeNote(id));
+
+      try {
+        // In a real app, you'd have a bulk delete endpoint
+        await Promise.all(selectedNoteIds.map(id => apiClient.deleteNote(id)));
+        addToast({ type: 'success', title: `${selectedNoteIds.length} notes deleted` });
+        setSelectedNoteIds([]);
+      } catch (error) {
+        console.error('Error deleting selected notes:', error);
+        // Rollback
+        originalNotes.forEach(note => upsertNote(note));
+        addToast({ type: 'error', title: 'Failed to delete notes', description: 'Please try again.' });
+      }
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedNoteIds([]);
+  };
+
   const handleDuplicateNote = (noteId: string) => {
     // TODO: Implement note duplication
     console.log('Duplicate note:', noteId);
@@ -106,8 +162,10 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
       updateNote,
       removeNote,
       refetch: loadNotes,
+      deleteSelected: handleDeleteSelected,
+      clearSelection: clearSelection,
     });
-  }, [onReady, addNote, upsertNote, updateNote, removeNote, loadNotes]);
+  }, [onReady, addNote, upsertNote, updateNote, removeNote, loadNotes, handleDeleteSelected, clearSelection]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -184,10 +242,20 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {displayNotes.map((note) => (
             <div
-              key={note.id} 
-              onClick={() => handleNoteClick(note)}
-              className="bg-white hover:shadow-lg transition-all duration-300 cursor-pointer rounded-3xl p-8 group shadow-sm border border-gray-50"
+              key={note.id}
+              onClick={(e) => handleNoteClick(note, e)}
+              className={`relative bg-white hover:shadow-lg transition-all duration-300 cursor-pointer rounded-3xl p-8 group shadow-sm border ${selectedNoteIds.includes(note.id) ? 'border-orange-500' : 'border-gray-50'}`}
             >
+              <div className="absolute bottom-4 right-4 note-checkbox">
+                <input
+                  type="radio"
+                  name="note-selection"
+                  className="h-5 w-5 rounded-full border-gray-300 text-orange-600 focus:ring-orange-500"
+                  checked={selectedNoteIds.includes(note.id)}
+                  onChange={(e) => handleCheckboxChange(note.id, e.target.checked)}
+                  onClick={(e) => e.stopPropagation()} // Prevent card click when clicking checkbox
+                />
+              </div>
               {/* Status indicator for processing notes */}
               {note.status === 'processing' && (
                 <div className="flex items-center gap-2 mb-4 text-orange-600 text-sm">
@@ -205,7 +273,7 @@ export function NotesDashboard({ onAppendToNote, onReady }: NotesDashboardProps)
               )}
 
               {/* Title */}
-              <h3 className="text-xl font-bold text-gray-800 leading-snug mb-4 group-hover:text-gray-900">
+              <h3 className="text-lg font-bold text-gray-800 leading-snug mb-4 group-hover:text-gray-900">
                 {note.title}
               </h3>
               

@@ -3,8 +3,17 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export function LandingHero() {
+  const [waveformHeights, setWaveformHeights] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Generate consistent heights on client side only
+    const heights = Array.from({ length: 30 }, () => Math.random() * 30 + 10);
+    setWaveformHeights(heights);
+  }, []);
+
   return (
     <section className="relative pt-20 pb-16 overflow-hidden">
       {/* Background gradient */}
@@ -96,17 +105,28 @@ export function LandingHero() {
                 <div className="text-2xl font-bold mb-2" aria-label="Recording time: 1 minute 23 seconds">01:23</div>
                 {/* Animated waveform */}
                 <div className="flex justify-center items-center space-x-1 h-12">
-                  {Array.from({ length: 30 }).map((_, i) => (
+                  {waveformHeights.length > 0 ? waveformHeights.map((height, i) => (
                     <div
                       key={i}
                       className="w-1 bg-white/60 rounded-full animate-pulse"
                       style={{
-                        height: `${Math.random() * 30 + 10}px`,
+                        height: `${height}px`,
                         animationDelay: `${i * 0.1}s`,
                         animationDuration: '2s'
                       }}
                     />
-                  ))}
+                  )) : (
+                    // Fallback static bars for SSR
+                    Array.from({ length: 30 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1 bg-white/60 rounded-full"
+                        style={{
+                          height: '20px'
+                        }}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
               
