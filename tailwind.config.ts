@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssLineClamp from "@tailwindcss/line-clamp";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -60,10 +62,26 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        "collapse-up": {
+          "0%": { transform: 'scaleY(1)', opacity: '1', transformOrigin: 'top' },
+          "100%": { transform: 'scaleY(0)', opacity: '0', transformOrigin: 'top' }
+        },
+        "collapse-down": {
+          "0%": { transform: 'scaleY(0)', opacity: '0', transformOrigin: 'top' },
+          "100%": { transform: 'scaleY(1)', opacity: '1', transformOrigin: 'top' }
+        }
+      },
+      animation: {
+        "collapse-up": "collapse-up 300ms ease-out forwards",
+        "collapse-down": "collapse-down 300ms ease-out forwards"
+      },
     },
   },
   plugins: [
-    require("tailwindcss-animate"),
-    require("@tailwindcss/line-clamp"),
+    tailwindcssAnimate,
+    tailwindcssLineClamp,
   ],
-} satisfies Config;
+};
+
+export default config;

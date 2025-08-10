@@ -339,24 +339,20 @@ export function NoteModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] overflow-y-auto transition-all duration-300 ease-out bg-black/60 ${
-        isClosing 
-          ? 'animate-out fade-out-0' 
-          : 'animate-in fade-in-0'
+      className={`fixed inset-0 z-[100] overflow-y-auto flex items-start justify-center p-4 bg-black/60 transition-opacity duration-300 ${
+        isClosing ? 'opacity-0' : 'opacity-100'
       }`}
       onClick={handleBackdropClick}
     >
-      {/* Centering Container */}
-      <div className="min-h-full flex items-center justify-center p-4">
-        {/* Modal Container */}
-        <div
-          className={`relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl my-8 transform transition-all duration-300 ease-out ${
-            isClosing 
-              ? 'animate-out zoom-out-95 fade-out-0' 
-              : 'animate-in zoom-in-95 fade-in-0'
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
+      {/* Modal Container */}
+      <div
+        className={`relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl my-8 transform ${
+          isClosing 
+            ? 'animate-out animate-collapse-up' 
+            : 'animate-in animate-collapse-down'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
           {/* Close Button */}
           <button
             onClick={handleClose}
@@ -649,7 +645,6 @@ export function NoteModal({
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

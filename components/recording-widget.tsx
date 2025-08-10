@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { useNoteProcessingStatus } from "@/lib/hooks/use-note";
 import type { Note } from "@/lib/types";
 
-type RecordingState = 'idle' | 'preparing' | 'uploading' | 'recording' | 'processing';
+type RecordingState = 'idle' | 'uploading' | 'recording' | 'processing';
 
 export interface RecordingWidgetRef {
   startRecording: () => void;
@@ -93,7 +93,6 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       setError('');
       console.log('🎤 Starting recording...');
       // Show the widget immediately while we request permission
-      setRecordingState('preparing');
       
       // Check if audio recording is supported
       if (!AudioRecorder.isSupported()) {
@@ -310,21 +309,6 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           >
             cancel
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Preparing state (requesting permission)
-  if (recordingState === 'preparing') {
-    return (
-      <div className="flex justify-center">
-        <div className="bg-blue-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
-          <div className="flex justify-center mb-6">
-            <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-          </div>
-          <div className="text-xl font-normal mb-2">Preparing microphone…</div>
-          <div className="text-sm text-white/80">Allow microphone access to start recording</div>
         </div>
       </div>
     );
