@@ -9,9 +9,9 @@ export class ApiClient {
   private supabase = createClient()
 
   /**
-   * Upload audio file and create note
+   * Upload audio file and create note or append to existing note
    */
-  async uploadAudio(audioBlob: Blob, fileName: string = 'recording.wav'): Promise<{ success: boolean; noteId?: string; error?: string }> {
+  async uploadAudio(audioBlob: Blob, fileName: string = 'recording.wav', appendToNoteId?: string, abortSignal?: AbortSignal): Promise<{ success: boolean; noteId?: string; error?: string }> {
     try {
       console.log('🔐 Checking authentication...');
       // Get current user
@@ -30,7 +30,11 @@ export class ApiClient {
       
       const formData = new FormData()
       formData.append('audio', audioBlob, properFileName)
-      console.log('📦 Created form data with audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type, 'filename:', properFileName);
+      if (appendToNoteId) {
+        formData.append('appendToNoteId', appendToNoteId)
+        console.log('📦 Adding appendToNoteId to form data:', appendToNoteId);
+      }
+      console.log('📦 Created form data with audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type, 'filename:', properFileName, appendToNoteId ? `appending to note: ${appendToNoteId}` : 'creating new note');
 
       // Upload to API (include credentials for cookie-based auth)
       console.log('📤 Sending upload request to /api/upload-audio...');
@@ -38,6 +42,7 @@ export class ApiClient {
         method: 'POST',
         body: formData,
         credentials: 'include', // Important: Include cookies for authentication
+        signal: abortSignal, // Add abort signal for cancellation
       })
 
       console.log('📤 Upload response status:', response.status);
@@ -76,6 +81,15 @@ export class ApiClient {
       }
     } catch (error) {
       console.error('📤 Upload error:', error)
+      
+      // Handle abort error specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Upload canceled'
+        }
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'

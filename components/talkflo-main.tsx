@@ -7,8 +7,10 @@ import { useState, useRef } from "react";
 import type { Note } from "@/lib/types";
 
 export function TalkfloMain() {
-  const [recordingState, setRecordingState] = useState<'idle' | 'preparing' | 'recording' | 'uploading' | 'processing'>('idle');
+  const [recordingState, setRecordingState] = useState<'idle' | 'preparing' | 'recording' | 'paused' | 'uploading' | 'processing'>('idle');
   const [hasSelectedNotes, setHasSelectedNotes] = useState(false);
+  const [appendToNoteId, setAppendToNoteId] = useState<string | undefined>(undefined);
+  const appendToNoteIdRef = useRef<string | undefined>(undefined);
   const recordingWidgetRef = useRef<RecordingWidgetRef>(null);
   // Keep a reference to the dashboard list API so we can
   // optimistically add/update notes without forcing remounts
@@ -32,13 +34,24 @@ export function TalkfloMain() {
   };
 
   const handleAppendToNote = (noteId: string) => {
-    // Start recording when appending to a note
-    console.log('Appending to note:', noteId);
+    // Set the note ID to append to and start recording
+    console.log('🔗 handleAppendToNote called with noteId:', noteId);
+    setAppendToNoteId(noteId);
+    appendToNoteIdRef.current = noteId;
+    // Also set it directly on the recording widget
+    recordingWidgetRef.current?.setAppendToNoteId(noteId);
+    console.log('🔗 appendToNoteId state and ref set to:', noteId);
     handleStartRecording();
   };
 
-  const handleRecordingStateChange = (state: 'idle' | 'preparing' | 'recording' | 'uploading' | 'processing') => {
+  const handleRecordingStateChange = (state: 'idle' | 'preparing' | 'recording' | 'paused' | 'uploading' | 'processing') => {
     setRecordingState(state);
+    // Clear append note ID when recording is complete
+    if (state === 'idle') {
+      console.log('🔗 Clearing appendToNoteId on recording idle');
+      setAppendToNoteId(undefined);
+      appendToNoteIdRef.current = undefined;
+    }
   };
 
   // Handle note creation: perform an optimistic insert so the new
@@ -72,7 +85,9 @@ export function TalkfloMain() {
             ref={recordingWidgetRef} 
             onStateChange={handleRecordingStateChange}
             onNoteCreated={handleNoteCreated}
+            appendToNoteId={appendToNoteId}
             onNoteUpdated={(note) => {
+              console.log('🔄 Note updated in main component:', note.id, note.status);
               // Push status/content updates from the poller into the list
               if (note.status === 'completed') {
                 // Insert the completed note smoothly at the top and ensure
@@ -107,7 +122,13 @@ export function TalkfloMain() {
       {recordingState === 'idle' && (
         <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300 ${hasSelectedNotes ? 'opacity-0' : 'opacity-100'}`}>
           <button
-            onClick={handleStartRecording}
+            onClick={() => {
+              console.log('🔗 Floating button clicked - clearing append state');
+              setAppendToNoteId(undefined); // Clear any append state for new recordings
+              appendToNoteIdRef.current = undefined;
+              recordingWidgetRef.current?.setAppendToNoteId(undefined);
+              handleStartRecording();
+            }}
             className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl flex items-center justify-center group"
             tabIndex={hasSelectedNotes ? -1 : 0}
           >

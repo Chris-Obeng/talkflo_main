@@ -9,6 +9,7 @@ interface WebhookPayload {
   data: {
     noteId: string
     userId: string
+    isAppend?: boolean
     [key: string]: any
   }
 }
@@ -16,7 +17,7 @@ interface WebhookPayload {
 /**
  * Handle audio upload webhook
  */
-async function handleAudioUploaded(noteId: string, userId: string, supabase: any) {
+async function handleAudioUploaded(noteId: string, userId: string, supabase: any, isAppend?: boolean) {
   try {
     // Get the note details
     const { data: note, error } = await supabase
@@ -46,7 +47,8 @@ async function handleAudioUploaded(noteId: string, userId: string, supabase: any
       body: JSON.stringify({
         noteId: note.id,
         audioUrl: note.audio_url,
-        userId: note.user_id
+        userId: note.user_id,
+        isAppend: isAppend || false
       })
     })
 
@@ -142,7 +144,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const { noteId, userId } = payload.data
+    const { noteId, userId, isAppend } = payload.data
 
     if (!noteId || !userId) {
       return new Response(
@@ -162,7 +164,7 @@ Deno.serve(async (req: Request) => {
     // Handle different webhook types
     switch (payload.type) {
       case 'audio_uploaded':
-        result = await handleAudioUploaded(noteId, userId, supabase)
+        result = await handleAudioUploaded(noteId, userId, supabase, isAppend)
         break
       
       case 'processing_complete':

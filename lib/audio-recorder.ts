@@ -9,6 +9,8 @@ export class AudioRecorder {
   private onDataAvailable?: (event: BlobEvent) => void
   private onStop?: (audioBlob: Blob) => void
   private onError?: (error: Error) => void
+  private isPaused: boolean = false
+  private isCanceled: boolean = false
 
   /**
    * Request microphone permission and start recording
@@ -42,10 +44,13 @@ export class AudioRecorder {
       }
 
       this.mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { 
-          type: this.getSupportedMimeType() 
-        })
-        this.onStop?.(audioBlob)
+        // Only trigger onStop callback if recording wasn't canceled
+        if (!this.isCanceled) {
+          const audioBlob = new Blob(this.audioChunks, { 
+            type: this.getSupportedMimeType() 
+          })
+          this.onStop?.(audioBlob)
+        }
         this.cleanup()
       }
 
@@ -55,7 +60,8 @@ export class AudioRecorder {
         this.cleanup()
       }
 
-      // Start recording
+      // Reset canceled flag and start recording
+      this.isCanceled = false
       this.mediaRecorder.start(1000) // Collect data every second
       
     } catch (error) {
@@ -68,8 +74,44 @@ export class AudioRecorder {
    * Stop recording and get audio blob
    */
   stopRecording(): void {
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+    if (this.mediaRecorder && (this.mediaRecorder.state === 'recording' || this.mediaRecorder.state === 'paused')) {
       this.mediaRecorder.stop()
+    }
+  }
+
+  /**
+   * Pause recording
+   */
+  pauseRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.pause()
+      this.isPaused = true
+    }
+  }
+
+  /**
+   * Resume recording
+   */
+  resumeRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state === 'paused') {
+      this.mediaRecorder.resume()
+      this.isPaused = false
+    }
+  }
+
+  /**
+   * Cancel recording and discard audio
+   */
+  cancelRecording(): void {
+    if (this.mediaRecorder && (this.mediaRecorder.state === 'recording' || this.mediaRecorder.state === 'paused')) {
+      // Set canceled flag to prevent onStop callback
+      this.isCanceled = true
+      // Clear chunks to discard audio
+      this.audioChunks = []
+      this.mediaRecorder.stop()
+    } else {
+      // If not recording, just cleanup
+      this.cleanup()
     }
   }
 
@@ -78,6 +120,13 @@ export class AudioRecorder {
    */
   isRecording(): boolean {
     return this.mediaRecorder?.state === 'recording'
+  }
+
+  /**
+   * Check if recording is paused
+   */
+  isPausedRecording(): boolean {
+    return this.mediaRecorder?.state === 'paused' || this.isPaused
   }
 
   /**
@@ -110,6 +159,8 @@ export class AudioRecorder {
       this.audioStream = null
     }
     this.mediaRecorder = null
+    this.isPaused = false
+    this.isCanceled = false
   }
 
   /**

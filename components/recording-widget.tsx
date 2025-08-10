@@ -1,25 +1,29 @@
 "use client";
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from "react";
 import { AudioRecorder } from "@/lib/audio-recorder";
 import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
 import { useNoteProcessingStatus } from "@/lib/hooks/use-note";
 import type { Note } from "@/lib/types";
 
-type RecordingState = 'idle' | 'uploading' | 'recording' | 'processing';
+type RecordingState = 'idle' | 'uploading' | 'recording' | 'paused' | 'processing';
 
 export interface RecordingWidgetRef {
   startRecording: () => void;
+  setAppendToNoteId: (noteId: string | undefined) => void;
 }
 
 interface RecordingWidgetProps {
   onStateChange?: (state: RecordingState) => void;
   onNoteCreated?: (noteId: string) => void;
   onNoteUpdated?: (note: Note) => void;
+  appendToNoteId?: string;
 }
 
-export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated }, ref) => {
+export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated, appendToNoteId }, ref) => {
+  console.log('🎤 RecordingWidget rendered with appendToNoteId:', appendToNoteId);
+  const appendToNoteIdRef = useRef<string | undefined>(appendToNoteId);
   const { addToast } = useToast();
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [recordingTime, setRecordingTime] = useState(0);
@@ -27,6 +31,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   const [error, setError] = useState<string>('');
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
+  const [uploadAbortController, setUploadAbortController] = useState<AbortController | null>(null);
   
   // Use standard client polling for note processing status
   const { note: processingNote, isCompleted, hasFailed, isProcessing } = useNoteProcessingStatus(currentNoteId);
@@ -76,9 +81,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       interval = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } else {
+    } else if (recordingState === 'idle') {
       setRecordingTime(0);
     }
+    // Keep timer frozen when paused
     return () => clearInterval(interval);
   }, [recordingState]);
 
@@ -170,6 +176,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       setRecordingState('uploading');
       setUploadProgress(0);
 
+      // Create abort controller for upload cancellation
+      const abortController = new AbortController();
+      setUploadAbortController(abortController);
+
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
@@ -182,10 +192,15 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       }, 200);
 
       // Upload audio to backend
-      console.log('📤 Uploading audio to backend...');
-      const result = await apiClient.uploadAudio(audioBlob);
+      const currentAppendToNoteId = appendToNoteIdRef.current;
+      console.log('📤 Uploading audio to backend...', currentAppendToNoteId ? `appending to note: ${currentAppendToNoteId}` : 'creating new note');
+      console.log('📤 appendToNoteId value from ref:', currentAppendToNoteId);
+      const result = await apiClient.uploadAudio(audioBlob, 'recording.wav', currentAppendToNoteId, abortController.signal);
       clearInterval(progressInterval);
       setUploadProgress(100);
+      
+      // Clear abort controller after successful upload
+      setUploadAbortController(null);
       
       console.log('📤 Upload result:', result);
 
@@ -236,12 +251,19 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Upload failed';
       console.error('📤 Upload error:', error);
-      setError(errorMsg);
-      addToast({
-        type: 'error',
-        title: 'Upload Error',
-        description: errorMsg
-      });
+      
+      // Clear abort controller
+      setUploadAbortController(null);
+      
+      // Don't show error toast if upload was canceled
+      if (errorMsg !== 'Upload canceled') {
+        setError(errorMsg);
+        addToast({
+          type: 'error',
+          title: 'Upload Error',
+          description: errorMsg
+        });
+      }
       setRecordingState('idle');
     }
   };
@@ -251,21 +273,86 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     onStateChange?.(recordingState);
   }, [recordingState, onStateChange]);
 
-  // Expose startRecording function to parent via ref
+  // Update ref when prop changes
+  useEffect(() => {
+    appendToNoteIdRef.current = appendToNoteId;
+    console.log('🎤 appendToNoteIdRef updated to:', appendToNoteId);
+  }, [appendToNoteId]);
+
+  // Cleanup abort controller on unmount or state change
+  useEffect(() => {
+    return () => {
+      if (uploadAbortController) {
+        try {
+          uploadAbortController.abort();
+        } catch (error) {
+          // Ignore abort errors during cleanup
+          console.log('📤 Upload aborted during cleanup (expected)');
+        }
+      }
+    };
+  }, [uploadAbortController]);
+
+  // Expose functions to parent via ref
   useImperativeHandle(ref, () => ({
     startRecording,
+    setAppendToNoteId: (noteId: string | undefined) => {
+      appendToNoteIdRef.current = noteId;
+      console.log('🎤 appendToNoteIdRef set via ref to:', noteId);
+    },
   }));
 
   const stopRecording = () => {
-    if (audioRecorder.isRecording()) {
+    if (audioRecorder.isRecording() || audioRecorder.isPausedRecording()) {
       audioRecorder.stopRecording();
     }
   };
 
+  const pauseRecording = () => {
+    if (audioRecorder.isRecording()) {
+      audioRecorder.pauseRecording();
+      setRecordingState('paused');
+    }
+  };
+
+  const resumeRecording = () => {
+    if (audioRecorder.isPausedRecording()) {
+      audioRecorder.resumeRecording();
+      setRecordingState('recording');
+    }
+  };
+
+  const cancelRecording = () => {
+    if (audioRecorder.isRecording() || audioRecorder.isPausedRecording()) {
+      audioRecorder.cancelRecording();
+    }
+    setRecordingState('idle');
+    setRecordingTime(0);
+    setError('');
+  };
+
   const cancelUpload = () => {
+    // Cancel the upload request if it's in progress
+    if (uploadAbortController) {
+      console.log('📤 Canceling upload...');
+      try {
+        uploadAbortController.abort();
+      } catch (error) {
+        // Ignore abort errors as they're expected
+        console.log('📤 Upload aborted (expected)');
+      }
+      setUploadAbortController(null);
+    }
+    
     setRecordingState('idle');
     setUploadProgress(0);
     setError('');
+    
+    addToast({
+      type: 'info',
+      title: 'Upload Canceled',
+      description: 'Audio upload has been canceled'
+    });
   };
 
   // Idle state - no widget shown (floating button handles this)
@@ -346,8 +433,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     );
   }
 
-  // Recording state (exactly like AudioPen)
-  if (recordingState === 'recording') {
+  // Recording state (with pause/resume functionality)
+  if (recordingState === 'recording' || recordingState === 'paused') {
+    const isRecording = recordingState === 'recording';
+    
     return (
       <div className="flex justify-center">
         <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
@@ -356,20 +445,27 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             {formatTime(recordingTime)}
           </div>
           
-          {/* Waveform visualization (exactly like AudioPen) */}
+          {/* Waveform visualization - animated only when recording */}
           <div className="flex justify-center items-end space-x-1 mb-8 h-20">
             {Array.from({ length: 45 }).map((_, i) => (
               <div
                 key={i}
-                className="w-1 bg-white/80 rounded-full animate-pulse"
+                className={`w-1 bg-white/80 rounded-full ${isRecording ? 'animate-pulse' : ''}`}
                 style={{
                   height: `${Math.random() * 60 + 15}px`,
-                  animationDelay: `${i * 0.05}s`,
-                  animationDuration: `${0.8 + Math.random() * 0.4}s`
+                  animationDelay: isRecording ? `${i * 0.05}s` : undefined,
+                  animationDuration: isRecording ? `${0.8 + Math.random() * 0.4}s` : undefined
                 }}
               />
             ))}
           </div>
+
+          {/* Paused indicator */}
+          {!isRecording && (
+            <div className="text-white/80 text-sm mb-4">
+              Recording paused
+            </div>
+          )}
 
           {/* Error message if any */}
           {error && (
@@ -378,30 +474,41 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             </div>
           )}
 
-          {/* Control buttons - positioned like AudioPen */}
+          {/* Control buttons */}
           <div className="flex justify-between items-center px-4">
-            {/* Recording time instead of refresh button */}
-            <div className="w-8 h-8 flex items-center justify-center text-xs text-white/70">
-              {Math.floor(recordingTime / 60)}&apos;
-            </div>
+            {/* Pause/Resume button */}
+            <button 
+              onClick={isRecording ? pauseRecording : resumeRecording}
+              className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+              title={isRecording ? "Pause recording" : "Resume recording"}
+            >
+              {isRecording ? (
+                // Pause icon
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                </svg>
+              ) : (
+                // Play/Resume icon
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              )}
+            </button>
             
             {/* Stop button */}
             <button 
               onClick={stopRecording}
               className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg relative -mb-8"
+              title="Stop recording"
             >
               <div className="w-5 h-5 bg-orange-500 rounded-sm"></div>
             </button>
             
             {/* Cancel/Close button */}
             <button 
-              onClick={() => {
-                if (audioRecorder.isRecording()) {
-                  audioRecorder.stopRecording();
-                }
-                setRecordingState('idle');
-              }}
+              onClick={cancelRecording}
               className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+              title="Cancel recording"
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

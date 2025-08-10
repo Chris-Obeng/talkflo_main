@@ -23,6 +23,7 @@ interface ProcessAudioRequest {
   noteId: string
   audioUrl: string
   userId: string
+  isAppend?: boolean
 }
 
 // Enhanced error handling
@@ -408,10 +409,10 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body = await req.json()
-    const { noteId: requestNoteId, audioUrl, userId } = body as ProcessAudioRequest
+    const { noteId: requestNoteId, audioUrl, userId, isAppend } = body as ProcessAudioRequest
     noteId = requestNoteId
 
-    console.log('📋 Request details:', { noteId, audioUrl, userId })
+    console.log('📋 Request details:', { noteId, audioUrl, userId, isAppend })
 
     if (!noteId || !audioUrl || !userId) {
       const error = 'Missing required fields: noteId, audioUrl, userId'
@@ -420,6 +421,29 @@ Deno.serve(async (req: Request) => {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       })
+    }
+
+    // Get existing note data if appending
+    let existingNote = null
+    if (isAppend) {
+      console.log('📖 Fetching existing note for append operation...')
+      const { data: noteData, error: fetchError } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', noteId)
+        .eq('user_id', userId)
+        .single()
+
+      if (fetchError || !noteData) {
+        const error = 'Note not found for append operation'
+        console.error('❌', error)
+        return new Response(JSON.stringify({ error }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      existingNote = noteData
+      console.log('📖 Existing note found:', existingNote.title)
     }
 
     // Update note status to processing
@@ -440,19 +464,43 @@ Deno.serve(async (req: Request) => {
       
       // Step 2: Process content
       console.log('🤖 === STEP 2: CONTENT PROCESSING ===')
-      const processedContent = await processText(transcript)
-      
-      // Step 3: Generate title
-      console.log('📝 === STEP 3: TITLE GENERATION ===')
-      const generatedTitle = await generateTitle(processedContent)
+      let processedContent: string
+      let finalTitle: string
+      let finalTranscript: string
+
+      if (isAppend && existingNote) {
+        // For append operations, combine with existing content
+        console.log('🔗 Appending to existing content...')
+        
+        // Combine transcripts
+        const existingTranscript = existingNote.original_transcript || ''
+        finalTranscript = existingTranscript + (existingTranscript ? '\n\n--- New Recording ---\n\n' : '') + transcript
+        
+        // Process the new transcript and append to existing content
+        const newProcessedContent = await processText(transcript)
+        const existingProcessedContent = existingNote.processed_content || ''
+        processedContent = existingProcessedContent + (existingProcessedContent ? '\n\n' : '') + newProcessedContent
+        
+        // Keep the existing title for append operations
+        finalTitle = existingNote.title || 'Untitled Note'
+        console.log('🔗 Content appended to existing note')
+      } else {
+        // For new notes, process normally
+        processedContent = await processText(transcript)
+        finalTranscript = transcript
+        
+        // Step 3: Generate title
+        console.log('📝 === STEP 3: TITLE GENERATION ===')
+        finalTitle = await generateTitle(processedContent)
+      }
 
       // Update note with results
       console.log('💾 === STEP 4: SAVING RESULTS ===')
       const { data: updatedNote, error: updateError } = await supabase
         .from('notes')
         .update({
-          title: generatedTitle,
-          original_transcript: transcript,
+          title: finalTitle,
+          original_transcript: finalTranscript,
           processed_content: processedContent,
           status: 'completed',
           error_message: null,
