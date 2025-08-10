@@ -5,6 +5,7 @@ import { AudioRecorder } from "@/lib/audio-recorder";
 import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
 import { useNoteProcessingStatus } from "@/lib/hooks/use-note";
+import { AudioVisualizer } from "@/components/audio-visualizer";
 import type { Note } from "@/lib/types";
 
 type RecordingState = 'idle' | 'uploading' | 'recording' | 'paused' | 'processing';
@@ -445,19 +446,13 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             {formatTime(recordingTime)}
           </div>
           
-          {/* Waveform visualization - animated only when recording */}
-          <div className="flex justify-center items-end space-x-1 mb-8 h-20">
-            {Array.from({ length: 45 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-1 bg-white/80 rounded-full ${isRecording ? 'animate-pulse' : ''}`}
-                style={{
-                  height: `${Math.random() * 60 + 15}px`,
-                  animationDelay: isRecording ? `${i * 0.05}s` : undefined,
-                  animationDuration: isRecording ? `${0.8 + Math.random() * 0.4}s` : undefined
-                }}
-              />
-            ))}
+          {/* Real-time waveform visualization */}
+          <div className="mb-8">
+            <AudioVisualizer
+              audioStream={audioRecorder.getAudioStream()}
+              isActive={isRecording}
+              className="w-full"
+            />
           </div>
 
           {/* Paused indicator */}

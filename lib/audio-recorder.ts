@@ -130,6 +130,13 @@ export class AudioRecorder {
   }
 
   /**
+   * Get the current audio stream for visualization
+   */
+  getAudioStream(): MediaStream | null {
+    return this.audioStream
+  }
+
+  /**
    * Set callback for when audio data is available
    */
   setOnDataAvailable(callback: (event: BlobEvent) => void): void {
