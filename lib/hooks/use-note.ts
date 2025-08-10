@@ -4,7 +4,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Note } from '@/lib/types'
+import { Note, NoteTag, UITag } from '@/lib/types'
+
+interface NoteTagWithTag extends NoteTag {
+  tags: UITag;
+}
 
 interface UseNoteOptions {
   noteId: string | null
@@ -50,7 +54,7 @@ export function useNote({ noteId, onUpdate, enabled = true }: UseNoteOptions) {
       // Transform the data to match our Note type
       const noteData: Note = {
         ...data,
-        tags: data.note_tags?.map((nt: any) => nt.tags) || []
+        tags: data.note_tags?.map((nt: NoteTagWithTag) => nt.tags) || []
       }
 
       setNote(noteData)
@@ -137,7 +141,7 @@ export function useNoteProcessingStatus(noteId: string | null) {
       console.log('🛑 Stopping polling for note:', noteId)
       clearInterval(pollInterval)
     }
-  }, [noteId, note?.status, refetch]) // Only depend on note.status, not the entire note object
+  }, [noteId, note, refetch])
 
   // Reset state when noteId changes
   useEffect(() => {

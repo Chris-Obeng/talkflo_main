@@ -67,7 +67,7 @@ export function UseCases() {
             <span className="text-orange-500">Every Use Case</span>
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Whether you're creating content, taking notes, or brainstorming ideas, 
+            Whether you&apos;re creating content, taking notes, or brainstorming ideas, 
             Talkflo adapts to your workflow seamlessly.
           </p>
         </div>

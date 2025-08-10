@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { headers } from 'next/headers'
 
 // Maximum file size: 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024

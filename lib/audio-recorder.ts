@@ -50,7 +50,7 @@ export class AudioRecorder {
       }
 
       this.mediaRecorder.onerror = (event) => {
-        const error = new Error('MediaRecorder error: ' + (event as any).error)
+        const error = new Error('MediaRecorder error: ' + (event instanceof ErrorEvent ? event.error : 'Unknown error'))
         this.onError?.(error)
         this.cleanup()
       }
@@ -137,7 +137,7 @@ export class AudioRecorder {
    */
   static isSupported(): boolean {
     return !!(navigator.mediaDevices && 
-             navigator.mediaDevices.getUserMedia && 
+             typeof navigator.mediaDevices.getUserMedia === 'function' &&
              window.MediaRecorder)
   }
 

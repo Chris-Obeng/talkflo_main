@@ -57,7 +57,7 @@ export function FAQ() {
             <span className="text-orange-500">Questions</span>
           </h2>
           <p className="text-xl text-slate-600">
-            Everything you need to know about Talkflo. Can't find what you're looking for? 
+            Everything you need to know about Talkflo. Can&apos;t find what you&apos;re looking for? 
             <a href="#" className="text-orange-500 hover:text-orange-600 underline ml-1">
               Contact our support team
             </a>.

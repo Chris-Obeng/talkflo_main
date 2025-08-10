@@ -8,7 +8,7 @@ export interface Note {
   processed_content?: string | null
   audio_url?: string | null
   audio_duration?: number | null
-  status: 'processing' | 'completed' | 'failed'
+  status: 'processing' | 'completed' | 'failed' | 'pending'
   error_message?: string | null
   created_at: string
   updated_at: string
@@ -38,14 +38,14 @@ export interface NoteTag {
   created_at: string
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T> {
   success: boolean
   message?: string
   error?: string
   data?: T
 }
 
-export interface NotesResponse extends ApiResponse {
+export interface NotesResponse extends ApiResponse<{ notes: Note[]; pagination: { total: number; limit: number; offset: number; hasMore: boolean } }> {
   notes: Note[]
   pagination: {
     total: number
@@ -55,15 +55,15 @@ export interface NotesResponse extends ApiResponse {
   }
 }
 
-export interface NoteResponse extends ApiResponse {
+export interface NoteResponse extends ApiResponse<{ note: Note }> {
   note: Note
 }
 
-export interface TagsResponse extends ApiResponse {
+export interface TagsResponse extends ApiResponse<{ tags: Tag[] }> {
   tags: Tag[]
 }
 
-export interface TagResponse extends ApiResponse {
+export interface TagResponse extends ApiResponse<{ tag: Tag }> {
   tag: Tag
 }
 

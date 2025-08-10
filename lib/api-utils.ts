@@ -22,7 +22,7 @@ export function createErrorResponse(error: string, statusCode: number = 500) {
   return NextResponse.json({ error }, { status: statusCode })
 }
 
-export function createSuccessResponse(data: any, statusCode: number = 200) {
+export function createSuccessResponse(data: Record<string, unknown>, statusCode: number = 200) {
   return NextResponse.json({ success: true, ...data }, { status: statusCode })
 }
 
@@ -54,7 +54,9 @@ export function rateLimitUser(userId: string, maxRequests: number = 100) {
 }
 
 // Database query helpers
-export async function verifyNoteOwnership(supabase: any, noteId: string, userId: string) {
+import { SupabaseClient } from '@supabase/supabase-js';
+
+export async function verifyNoteOwnership(supabase: SupabaseClient, noteId: string, userId: string) {
   const { data: note, error } = await supabase
     .from('notes')
     .select('id')
@@ -69,7 +71,7 @@ export async function verifyNoteOwnership(supabase: any, noteId: string, userId:
   return note
 }
 
-export async function verifyTagOwnership(supabase: any, tagId: string, userId: string) {
+export async function verifyTagOwnership(supabase: SupabaseClient, tagId: string, userId: string) {
   const { data: tag, error } = await supabase
     .from('tags')
     .select('id')
@@ -101,7 +103,7 @@ export function extractFilePathFromURL(url: string): string {
 export async function parseJSONBody(request: Request) {
   try {
     return await request.json()
-  } catch (error) {
+  } catch {
     throw new APIError('Invalid JSON in request body', 400)
   }
 }
@@ -121,14 +123,14 @@ export function logAPIError(error: Error, method: string, path: string, userId?:
 }
 
 // Response formatting helpers
-export function formatNoteWithTags(note: any) {
+export function formatNoteWithTags(note: Record<string, unknown> & { note_tags: { tags: unknown }[] }) {
   return {
     ...note,
-    tags: note.note_tags?.map((nt: any) => nt.tags).filter(Boolean) || []
+    tags: note.note_tags?.map((nt) => nt.tags).filter(Boolean) || []
   }
 }
 
-export function formatTagWithUsageCount(tag: any) {
+export function formatTagWithUsageCount(tag: Record<string, unknown> & { note_tags: unknown[] }) {
   return {
     ...tag,
     usage_count: tag.note_tags?.length || 0
@@ -136,7 +138,7 @@ export function formatTagWithUsageCount(tag: any) {
 }
 
 // Generic error handler for API routes
-export function handleAPIError(error: any, method: string, path: string, userId?: string) {
+export function handleAPIError(error: Error, method: string, path: string, userId?: string) {
   logAPIError(error, method, path, userId)
   
   if (error instanceof APIError) {

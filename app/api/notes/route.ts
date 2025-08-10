@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { NoteTag, UITag } from '@/lib/types';
 
-// GET /api/notes - Fetch notes with filtering and pagination
+interface NoteTagWithTag extends NoteTag {
+  tags: UITag;
+}
+ 
+ // GET /api/notes - Fetch notes with filtering and pagination
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -66,7 +71,7 @@ export async function GET(request: NextRequest) {
     let filteredNotes = notes
     if (tags.length > 0) {
       filteredNotes = notes.filter(note => {
-        const noteTags = note.note_tags?.map((nt: any) => nt.tags?.name) || []
+        const noteTags = note.note_tags?.map((nt: NoteTagWithTag) => nt.tags?.name) || []
         return tags.some(tag => noteTags.includes(tag))
       })
     }
@@ -74,12 +79,12 @@ export async function GET(request: NextRequest) {
     // Format the response
     const formattedNotes = filteredNotes.map(note => ({
       ...note,
-      tags: note.note_tags?.map((nt: any) => nt.tags).filter(Boolean) || []
+      tags: note.note_tags?.map((nt: NoteTagWithTag) => nt.tags).filter(Boolean) || []
     }))
 
     // Remove the note_tags property as we've flattened it to tags
     formattedNotes.forEach(note => {
-      delete (note as any).note_tags
+      delete (note as { note_tags?: NoteTagWithTag[] }).note_tags
     })
 
     // Get total count for pagination

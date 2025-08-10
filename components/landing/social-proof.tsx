@@ -104,7 +104,7 @@ export function SocialProof() {
               </div>
               
               <p className="text-slate-600 leading-relaxed">
-                "{testimonial.text}"
+                &quot;{testimonial.text}&quot;
               </p>
             </div>
           ))}

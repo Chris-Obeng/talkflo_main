@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// GET /api/notes/[noteId] - Fetch single note with full details
+import { NoteTag, UITag } from '@/lib/types';
+
+interface NoteTagWithTag extends NoteTag {
+  tags: UITag;
+}
+ 
+ // GET /api/notes/[noteId] - Fetch single note with full details
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ noteId: string }> }
@@ -48,9 +54,9 @@ export async function GET(
     // Format the response
     const formattedNote = {
       ...note,
-      tags: note.note_tags?.map((nt: any) => nt.tags).filter(Boolean) || []
+      tags: note.note_tags?.map((nt: NoteTagWithTag) => nt.tags).filter(Boolean) || []
     }
-    delete (formattedNote as any).note_tags
+    delete (formattedNote as { note_tags?: NoteTagWithTag[] }).note_tags
 
     return NextResponse.json({
       success: true,
@@ -113,7 +119,11 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: {
+      title?: string;
+      processed_content?: string;
+      updated_at: string;
+    } = {
       updated_at: new Date().toISOString()
     }
 
@@ -149,9 +159,9 @@ export async function PUT(
     // Format the response
     const formattedNote = {
       ...updatedNote,
-      tags: updatedNote.note_tags?.map((nt: any) => nt.tags).filter(Boolean) || []
+      tags: updatedNote.note_tags?.map((nt: NoteTagWithTag) => nt.tags).filter(Boolean) || []
     }
-    delete (formattedNote as any).note_tags
+    delete (formattedNote as { note_tags?: NoteTagWithTag[] }).note_tags
 
     return NextResponse.json({
       success: true,

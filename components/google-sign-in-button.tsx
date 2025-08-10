@@ -9,7 +9,7 @@ interface GoogleSignInButtonProps {
   onError?: (error: string) => void;
 }
 
-export function GoogleSignInButton({ mode, onError }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {

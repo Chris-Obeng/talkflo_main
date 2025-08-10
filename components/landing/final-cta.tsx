@@ -20,7 +20,7 @@ export function FinalCTA() {
         </h2>
         
         <p className="text-xl sm:text-2xl text-orange-100 mb-8 leading-relaxed">
-          Join thousands who've ditched typing for speaking. Transform your ideas into perfect text in seconds, not hours.
+          Join thousands who&apos;ve ditched typing for speaking. Transform your ideas into perfect text in seconds, not hours.
         </p>
 
         {/* Value props */}

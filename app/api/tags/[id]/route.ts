@@ -97,7 +97,7 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {}
+    const updateData: { name?: string; color?: string | null } = {}
     if (name !== undefined) updateData.name = name.trim()
     if (color !== undefined) updateData.color = color
 
@@ -125,7 +125,7 @@ export async function PUT(
       ...updatedTag,
       usage_count: updatedTag.note_tags?.length || 0
     }
-    delete (formattedTag as any).note_tags
+    delete (formattedTag as { note_tags?: { count: number }[] }).note_tags
 
     return NextResponse.json({
       success: true,

@@ -98,7 +98,7 @@ export function PricingSection() {
             <span className="text-orange-500">Pricing</span>
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-8">
-            Start free, upgrade when you're ready. No hidden fees, no surprises. 
+            Start free, upgrade when you&apos;re ready. No hidden fees, no surprises. 
             Cancel anytime with our 30-day money-back guarantee.
           </p>
 

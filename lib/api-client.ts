@@ -3,9 +3,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
-import { Note, Tag, ApiResponse, NotesResponse, TagsResponse } from './types'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+import { Note, Tag } from './types'
 
 export class ApiClient {
   private supabase = createClient()

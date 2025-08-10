@@ -44,8 +44,8 @@ export async function POST(
     let rewritten: string
     try {
       rewritten = await rewriteTranscriptWithGemini(transcript, instructions)
-    } catch (err: any) {
-      const message = err?.message || 'Rewrite failed'
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Rewrite failed'
       return NextResponse.json({ error: message }, { status: 500 })
     }
 

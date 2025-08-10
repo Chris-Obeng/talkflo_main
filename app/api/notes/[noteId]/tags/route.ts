@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { NoteTag, UITag } from '@/lib/types';
 
-// POST /api/notes/[noteId]/tags - Add tags to note
+interface NoteTagWithTag extends NoteTag {
+  tags: UITag;
+}
+ 
+ // POST /api/notes/[noteId]/tags - Add tags to note
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ noteId: string }> }
@@ -139,9 +144,9 @@ export async function POST(
     // Format the response
     const formattedNote = {
       ...updatedNote,
-      tags: updatedNote.note_tags?.map((nt: any) => nt.tags).filter(Boolean) || []
+      tags: updatedNote.note_tags?.map((nt: NoteTagWithTag) => nt.tags).filter(Boolean) || []
     }
-    delete (formattedNote as any).note_tags
+    delete (formattedNote as { note_tags?: NoteTagWithTag[] }).note_tags
 
     return NextResponse.json({
       success: true,
