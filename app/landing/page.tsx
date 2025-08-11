@@ -6,6 +6,8 @@ import { FAQ } from "@/components/landing/faq";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { LandingNavbar } from "@/components/landing/navbar";
 import { LandingFooter } from "@/components/landing/footer";
+import { HowItWorks } from "@/components/landing/how-it-works";
+import { SocialProof } from "@/components/landing/social-proof";
 import { Metadata } from "next";
 import Script from "next/script";
 
@@ -64,6 +66,8 @@ export default function LandingPage() {
           <LandingHero />
           <ProblemSolution />
           <CoreFeatures />
+          <HowItWorks />
+          <SocialProof />
           <UseCases />
           <FAQ />
           <FinalCTA />

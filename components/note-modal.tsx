@@ -678,45 +678,16 @@ export function NoteModal({
                   <textarea
                     ref={(textarea) => {
                       if (textarea) {
-                        // Focus the textarea
+                        // Focus and place cursor based on previously estimated position
                         textarea.focus();
-                        
-                        // Get the click position from the parent div
-                        const parentDiv = textarea.parentElement?.querySelector('div[title="Click to edit content"]') as any;
-                        const clickPosition = parentDiv?.clickPosition;
-                        
-                        if (clickPosition) {
-                          // Use document.caretPositionFromPoint or document.caretRangeFromPoint
-                          let caretPos = 0;
-                          
-                          if (document.caretPositionFromPoint) {
-                            const caretPosition = document.caretPositionFromPoint(clickPosition.x, clickPosition.y);
-                            if (caretPosition) {
-                              // Calculate text offset based on the caret position
-                              const range = document.createRange();
-                              range.setStart(caretPosition.offsetNode, caretPosition.offset);
-                              range.setEnd(caretPosition.offsetNode, caretPosition.offset);
-                              
-                              // Get text content up to the caret position
-                              const textBeforeCaret = range.startContainer.textContent?.substring(0, range.startOffset) || '';
-                              caretPos = textBeforeCaret.length;
-                            }
-                          } else if (document.caretRangeFromPoint) {
-                            const range = document.caretRangeFromPoint(clickPosition.x, clickPosition.y);
-                            if (range) {
-                              const textBeforeCaret = range.startContainer.textContent?.substring(0, range.startOffset) || '';
-                              caretPos = textBeforeCaret.length;
-                            }
+                        const safePos = Math.max(0, Math.min(cursorPositionRef.current, textarea.value.length));
+                        setTimeout(() => {
+                          try {
+                            textarea.setSelectionRange(safePos, safePos);
+                          } catch {
+                            // ignore selection errors
                           }
-                          
-                          // Set cursor position in textarea
-                          setTimeout(() => {
-                            textarea.setSelectionRange(caretPos, caretPos);
-                          }, 0);
-                          
-                          // Clean up the stored click position
-                          delete parentDiv.clickPosition;
-                        }
+                        }, 0);
                       }
                     }}
                     data-content-editor="true"

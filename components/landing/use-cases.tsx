@@ -100,9 +100,9 @@ export function UseCases() {
           <p className="text-lg text-slate-600 mb-6">
             Ready to transform how you capture ideas?
           </p>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
-            Start Your Free Trial
-          </button>
+          <a href="/auth/sign-up" className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+            Try Talkflo Free
+          </a>
         </div>
       </div>
     </section>

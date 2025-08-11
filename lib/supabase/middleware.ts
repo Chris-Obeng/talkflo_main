@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
   // Do not run code between createServerClient and supabase.auth.getUser()
   
   // getUser() automatically handles token refresh, unlike getClaims()
-  const { data, error } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
   const user = data?.user;
 
   // Allow unauthenticated access to landing page and auth pages

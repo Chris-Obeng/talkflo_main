@@ -5,7 +5,7 @@ export function ProblemSolution() {
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6" dangerouslySetInnerHTML={{ __html: `Your Best Ideas Come When You're <span class="text-orange-500">Away From Your Desk</span>` }} />
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6" dangerouslySetInnerHTML={{ __html: `Your Best Ideas Come When You're <span class=\"text-orange-500\">Away From Your Desk</span>` }} />
           <p className="text-xl text-slate-600 max-w-3xl mx-auto" dangerouslySetInnerHTML={{ __html: `Tired of staring at blank documents? Your creativity flows when you're walking, driving, or simply away from the keyboard. Don't let brilliant thoughts slip away.` }} />
         </div>
 
@@ -46,7 +46,7 @@ export function ProblemSolution() {
                   <svg aria-hidden="true" className="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
-                  <span dangerouslySetInnerHTML={{ __html: `Writer's block killing productivity` }} />
+                  <span dangerouslySetInnerHTML={{ __html: `Writer\'s block killing productivity` }} />
                 </div>
               </div>
 

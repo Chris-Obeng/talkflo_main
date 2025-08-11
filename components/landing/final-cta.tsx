@@ -16,11 +16,11 @@ export function FinalCTA() {
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-          Ready to Unlock Your Voice?
+          Ready to Transform How You Capture Ideas?
         </h2>
         
         <p className="text-xl sm:text-2xl text-orange-100 mb-8 leading-relaxed">
-          Join thousands who've ditched typing for speaking. Transform your ideas into perfect text in seconds, not hours.
+          Join thousands who&apos;ve ditched typing for speaking. Transform your ideas into perfect text in seconds, not hours.
         </p>
 
 
@@ -37,7 +37,7 @@ export function FinalCTA() {
                 <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
                 <path d="M12 18v4M8 22h8"/>
               </svg>
-              Get Started
+              Try Talkflo Free
             </Link>
           </Button>
           

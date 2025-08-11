@@ -22,18 +22,24 @@ export function LandingNavbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
+            <Link href="#how-it-works" className="text-slate-600 hover:text-slate-900 transition-colors">
+              How it works
+            </Link>
+            <Link href="#features" className="text-slate-600 hover:text-slate-900 transition-colors">
+              Features
+            </Link>
             <Link href="/auth/login" className="text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>
             <Button asChild className="bg-orange-500 hover:bg-orange-600">
-              <Link href="/auth/sign-up">Start Free</Link>
+              <Link href="/auth/sign-up">Try Talkflo Free</Link>
             </Button>
           </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden">
             <Button asChild size="sm" className="bg-orange-500 hover:bg-orange-600">
-              <Link href="/auth/sign-up">Start Free</Link>
+              <Link href="/auth/sign-up">Try Free</Link>
             </Button>
           </div>
         </div>

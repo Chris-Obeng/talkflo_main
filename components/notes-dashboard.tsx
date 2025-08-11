@@ -313,7 +313,7 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
             </div>
             <h3 className="text-xl font-semibold text-gray-800 mb-2">No notes found</h3>
             <p className="text-gray-500 mb-4">
-              No notes match your search for "{searchQuery}". Try different keywords or check your spelling.
+              No notes match your search for &quot;{searchQuery}&quot;. Try different keywords or check your spelling.
             </p>
             <button
               onClick={() => setSearchQuery("")}

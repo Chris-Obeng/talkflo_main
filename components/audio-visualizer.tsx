@@ -17,14 +17,18 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   const animationRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   const initializeAudioContext = useCallback(() => {
     if (!audioStream || !canvasRef.current) return;
 
     try {
-      // Create audio context
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create audio context (supports older WebKit)
+      const WebAudioContext: typeof AudioContext | undefined =
+        (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!WebAudioContext) return;
+      audioContextRef.current = new WebAudioContext();
       const audioContext = audioContextRef.current;
 
       // Create analyser node
@@ -41,6 +45,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       
       // Create data array for frequency data
       const bufferLength = analyser.frequencyBinCount;
+      // Create backing array for frequency data
       dataArrayRef.current = new Uint8Array(new ArrayBuffer(bufferLength));
       
       console.log('🎵 Audio visualizer initialized');
@@ -57,10 +62,10 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     if (!ctx) return;
 
     const analyser = analyserRef.current;
-    const dataArray = dataArrayRef.current;
+    const dataArray = dataArrayRef.current as Uint8Array<ArrayBuffer>;
     
     // Get frequency data
-    (analyser as any).getByteFrequencyData(dataArray);
+    analyser.getByteFrequencyData(dataArray);
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
