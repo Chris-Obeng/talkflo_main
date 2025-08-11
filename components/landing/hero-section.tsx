@@ -14,14 +14,15 @@ export function LandingHero() {
   }, []);
 
   return (
-    <section className="relative pt-24 pb-20 overflow-hidden mt-12">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-stone-50 to-stone-100" />
+    <section className="relative pt-28 pb-24 overflow-hidden mt-12 spotlight">
+      {/* Background gradient + grid */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-orange-50/40 to-stone-50" />
+      <div className="absolute inset-0 bg-grid-slate-100 opacity-50" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           {/* Main headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 leading-tight">
             Turn Your Voice Into <span className="text-orange-600">Perfect Text</span>
             <span className="block text-xl sm:text-2xl text-slate-700 mt-4 font-normal">
               Instantly. <span className="text-orange-600 font-semibold">100% Free</span>.
@@ -39,7 +40,7 @@ export function LandingHero() {
             <Button
               asChild
               size="lg"
-              className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl"
             >
               <Link href="/auth/sign-up">
                 <svg aria-hidden="true" className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -50,7 +51,7 @@ export function LandingHero() {
                 Start Speaking for Free
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="px-8 py-4 text-lg">
+            <Button asChild variant="outline" size="lg" className="px-8 py-4 text-lg rounded-xl border-slate-200">
               <Link href="#how-it-works">See How It Works</Link>
             </Button>
           </div>
@@ -69,7 +70,7 @@ export function LandingHero() {
 
           {/* Animated demo card */}
           <div className="mt-12">
-            <div className="mx-auto max-w-3xl bg-white/70 backdrop-blur-xl border border-stone-200 rounded-2xl p-6 shadow-xl">
+            <div className="mx-auto max-w-3xl glass-card rounded-2xl p-6">
               <div className="grid grid-cols-12 gap-4 items-center">
                 {/* Waveform */}
                 <div className="col-span-5 flex items-end h-24 gap-1">
@@ -77,7 +78,7 @@ export function LandingHero() {
                     ? waveformHeights.map((h, i) => (
                         <div
                           key={i}
-                          className="w-1.5 rounded-full bg-orange-400/70 animate-pulse"
+                          className="w-1.5 rounded-full bg-orange-400/80 animate-pulse"
                           style={{ height: `${h}px`, animationDelay: `${i * 0.05}s`, animationDuration: '1.2s' }}
                         />
                       ))
@@ -95,10 +96,10 @@ export function LandingHero() {
                 </div>
                 {/* Text lines */}
                 <div className="col-span-5 space-y-2">
-                  <div className="h-3 rounded bg-stone-200" />
-                  <div className="h-3 rounded bg-stone-200 w-5/6" />
-                  <div className="h-3 rounded bg-stone-200 w-2/3" />
-                  <div className="h-3 rounded bg-stone-200 w-4/5" />
+                  <div className="h-3 rounded bg-stone-200/80" />
+                  <div className="h-3 rounded bg-stone-200/80 w-5/6" />
+                  <div className="h-3 rounded bg-stone-200/80 w-2/3" />
+                  <div className="h-3 rounded bg-stone-200/80 w-4/5" />
                   <div className="pt-2 flex gap-2">
                     <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4 2 2-6 6-4-4 2-2z"/></svg>

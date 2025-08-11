@@ -49,7 +49,7 @@ export function SocialProof() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
           {stats.map((s, i) => (
-            <div key={i} className="bg-stone-50 border border-stone-200 rounded-2xl p-6 text-center">
+            <div key={i} className="glass-card rounded-2xl p-6 text-center">
               <div className="text-3xl font-bold text-slate-900">{s.value}</div>
               <div className="text-slate-600 text-sm mt-1">{s.label}</div>
             </div>
@@ -61,7 +61,7 @@ export function SocialProof() {
           {testimonials.map((t, i) => (
             <div
               key={i}
-              className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+              className="glass-card rounded-2xl p-6 hover:shadow-lg transition-shadow"
             >
               <div className="text-4xl mb-3" aria-hidden>
                 {t.avatar}

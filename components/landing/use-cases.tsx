@@ -78,8 +78,8 @@ export function UseCases() {
               key={index}
               className="group cursor-pointer"
             >
-              <div className="bg-stone-50 rounded-2xl p-6 border border-stone-200 hover:border-orange-200 hover:bg-orange-50/50 transition-all duration-300">
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-100 transition-colors shadow-sm">
+              <div className="glass-card rounded-2xl p-6 hover:border-orange-200 hover:bg-orange-50/50 transition-all duration-300">
+                <div className="w-14 h-14 bg-gradient-to-br from-white to-orange-50 rounded-xl flex items-center justify-center mb-4 group-hover:from-orange-100 group-hover:to-orange-200 transition-colors shadow-sm">
                   <div className="text-orange-600 group-hover:text-orange-700">
                     {useCase.icon}
                   </div>

@@ -72,9 +72,9 @@ export function CoreFeatures() {
           {features.map((feature, index) => (
             <div 
               key={index}
-              className="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 hover:shadow-lg transition-all duration-300 group"
+              className="glass-card rounded-2xl p-8 hover:shadow-xl transition-all duration-300 group"
             >
-              <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center mb-6 group-hover:from-orange-200 group-hover:to-orange-300 transition-colors">
                 <div className="text-orange-600">
                   {feature.icon}
                 </div>

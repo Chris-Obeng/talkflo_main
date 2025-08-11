@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "next-themes";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
@@ -82,6 +83,7 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
