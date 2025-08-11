@@ -46,21 +46,19 @@ export async function POST(
     // Fallback processing: Mark as completed with basic content
     const fallbackContent = `**Audio Note**
 
-This audio file was uploaded successfully but automatic transcription is not yet configured.
+Your audio file was uploaded successfully! The automatic transcription service is currently unavailable, but your audio is safely stored and ready to use.
 
 **File Information:**
 - Duration: ${note.audio_duration ? `${note.audio_duration} seconds` : 'Unknown'}
 - Uploaded: ${new Date(note.created_at).toLocaleString()}
 
-**To enable automatic transcription:**
-1. Add your Google Gemini API key to environment variables
-2. Add your Supabase Service Role key to environment variables
-3. Deploy the Edge Functions for background processing
+**What you can do:**
+- Your audio file is accessible and can be downloaded
+- You can manually add notes and content to this entry
+- Try the transcription again later when the service is restored
 
-**Manual Options:**
-- Download the audio file to transcribe manually
-- Use external transcription services
-- Update this note with your own content`
+**For developers:**
+To enable automatic transcription, configure the Google Gemini API key and deploy the Edge Functions for background processing.`
 
     // Update the note with fallback content
     const { error: updateError } = await supabase
@@ -142,21 +140,19 @@ export async function GET(
     // Apply fallback directly without recursive API calls
     const fallbackContent = `**Audio Note**
 
-This audio file was uploaded successfully but automatic transcription took too long.
+Your audio file was uploaded successfully! The automatic transcription service is currently unavailable, but your audio is safely stored and ready to use.
 
 **File Information:**
 - Duration: ${note.audio_duration ? `${note.audio_duration} seconds` : 'Unknown'}
 - Uploaded: ${new Date(note.created_at).toLocaleString()}
 
-**To enable automatic transcription:**
-1. Add your Google Gemini API key to environment variables
-2. Add your Supabase Service Role key to environment variables
-3. Deploy the Edge Functions for background processing
+**What you can do:**
+- Your audio file is accessible and can be downloaded
+- You can manually add notes and content to this entry
+- Try the transcription again later when the service is restored
 
-**Manual Options:**
-- Download the audio file to transcribe manually
-- Use external transcription services
-- Update this note with your own content`
+**For developers:**
+To enable automatic transcription, configure the Google Gemini API key and deploy the Edge Functions for background processing.`
 
     // Update the note with fallback content directly
     const { error: updateError } = await supabase

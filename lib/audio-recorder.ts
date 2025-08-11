@@ -11,6 +11,9 @@ export class AudioRecorder {
   private onError?: (error: Error) => void
   private isPaused: boolean = false
   private isCanceled: boolean = false
+  private startTime: number = 0
+  private pausedDuration: number = 0
+  private pauseStartTime: number = 0
 
   /**
    * Request microphone permission and start recording
@@ -60,8 +63,11 @@ export class AudioRecorder {
         this.cleanup()
       }
 
-      // Reset canceled flag and start recording
+      // Reset canceled flag and timing
       this.isCanceled = false
+      this.startTime = Date.now()
+      this.pausedDuration = 0
+      this.pauseStartTime = 0
       this.mediaRecorder.start(1000) // Collect data every second
       
     } catch (error) {
@@ -86,6 +92,7 @@ export class AudioRecorder {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.pause()
       this.isPaused = true
+      this.pauseStartTime = Date.now()
     }
   }
 
@@ -96,6 +103,11 @@ export class AudioRecorder {
     if (this.mediaRecorder && this.mediaRecorder.state === 'paused') {
       this.mediaRecorder.resume()
       this.isPaused = false
+      // Add paused time to total paused duration
+      if (this.pauseStartTime > 0) {
+        this.pausedDuration += Date.now() - this.pauseStartTime
+        this.pauseStartTime = 0
+      }
     }
   }
 
@@ -137,6 +149,20 @@ export class AudioRecorder {
   }
 
   /**
+   * Get the active recording duration in seconds (excluding paused time)
+   */
+  getActiveRecordingDuration(): number {
+    if (!this.startTime) return 0
+    
+    const now = Date.now()
+    const totalElapsed = now - this.startTime
+    const currentPausedTime = this.isPaused && this.pauseStartTime > 0 ? now - this.pauseStartTime : 0
+    const activeTime = totalElapsed - this.pausedDuration - currentPausedTime
+    
+    return Math.floor(activeTime / 1000)
+  }
+
+  /**
    * Set callback for when audio data is available
    */
   setOnDataAvailable(callback: (event: BlobEvent) => void): void {
@@ -168,6 +194,9 @@ export class AudioRecorder {
     this.mediaRecorder = null
     this.isPaused = false
     this.isCanceled = false
+    this.startTime = 0
+    this.pausedDuration = 0
+    this.pauseStartTime = 0
   }
 
   /**

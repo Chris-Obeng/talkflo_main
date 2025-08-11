@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { NoteModal } from "./note-modal";
+import { NoteSkeleton } from "./ui/note-skeleton";
 import { Tag, Search } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { Note } from "@/lib/types";
@@ -220,11 +221,27 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
   // Loading state
   if (loading) {
     return (
-      <div className="w-full flex justify-center items-center py-12">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading your notes...</p>
+      <div className="w-full">
+        {/* Search Bar Skeleton */}
+        <div className="mb-8">
+          <div className="relative max-w-md mx-auto">
+            <div 
+              className="w-full h-12 rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(255, 255, 255, 0.25)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                border: "1px solid rgba(255, 255, 255, 0.18)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
+              }}
+            >
+              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+            </div>
+          </div>
         </div>
+        
+        {/* Note Cards Skeleton */}
+        <NoteSkeleton count={8} delay={300} />
       </div>
     );
   }

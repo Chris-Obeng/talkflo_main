@@ -70,11 +70,16 @@ const config: Config = {
         "collapse-down": {
           "0%": { transform: 'scaleY(0)', opacity: '0', transformOrigin: 'top' },
           "100%": { transform: 'scaleY(1)', opacity: '1', transformOrigin: 'top' }
+        },
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" }
         }
       },
       animation: {
         "collapse-up": "collapse-up 300ms ease-out forwards",
-        "collapse-down": "collapse-down 300ms ease-out forwards"
+        "collapse-down": "collapse-down 300ms ease-out forwards",
+        shimmer: "shimmer 2s ease-in-out infinite"
       },
     },
   },

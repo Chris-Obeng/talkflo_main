@@ -129,10 +129,36 @@ export function useNoteProcessingStatus(noteId: string | null) {
       return
     }
 
-    const pollInterval = setInterval(() => {
+    let pollCount = 0
+    const maxPolls = 60 // 2 minutes at 2-second intervals
+
+    const pollInterval = setInterval(async () => {
+      pollCount++
+      
       // Double-check status before refetching to prevent unnecessary calls
       if (note.status === 'processing' || note.status === 'pending') {
-        console.log('🔄 Polling for note updates:', noteId, 'status:', note.status)
+        console.log('🔄 Polling for note updates:', noteId, 'status:', note.status, `(${pollCount}/${maxPolls})`)
+        
+        // After 2 minutes of processing, trigger fallback
+        if (pollCount >= maxPolls) {
+          console.log('⏰ Processing timeout reached, triggering fallback...')
+          try {
+            const response = await fetch(`/api/process-audio/${noteId}`, {
+              method: 'GET',
+              credentials: 'include'
+            })
+            
+            if (response.ok) {
+              const result = await response.json()
+              if (result.action === 'fallback_applied') {
+                console.log('✅ Fallback processing applied')
+              }
+            }
+          } catch (error) {
+            console.error('Failed to trigger fallback processing:', error)
+          }
+        }
+        
         refetch()
       }
     }, 2000) // Poll every 2 seconds

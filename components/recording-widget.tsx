@@ -26,10 +26,15 @@ interface RecordingWidgetProps {
 
 export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated, appendToNoteId }, ref) => {
   console.log('🎤 RecordingWidget rendered with appendToNoteId:', appendToNoteId);
+  
+  // Recording time limit configuration (15 minutes = 900 seconds)
+  const MAX_RECORDING_TIME = 900;
+  const WARNING_TIME = 60; // Show warning when 1 minute left
+  
   const appendToNoteIdRef = useRef<string | undefined>(appendToNoteId);
   const { addToast } = useToast();
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTime, setRecordingTime] = useState(MAX_RECORDING_TIME);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string>('');
   const [audioRecorder] = useState(() => new AudioRecorder());
@@ -66,7 +71,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       addToast({
         type: 'error',
         title: 'Processing Failed',
-        description: errorMsg
+        description: 'Your audio was uploaded but processing failed. You can still access the audio file from your notes.'
       });
       setRecordingState('idle');
       setCurrentNoteId(null); // Stop monitoring this note
@@ -78,24 +83,61 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     }
   }, [processingNote, isCompleted, hasFailed, isProcessing, recordingState, addToast, onNoteUpdated]);
 
-  // Timer for recording
+  // Timer for recording with countdown and automatic stop at limit
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (recordingState === 'recording') {
+    if (recordingState === 'recording' || recordingState === 'paused') {
       interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        // Get active recording time from AudioRecorder (excludes paused time)
+        const activeTime = audioRecorder.getActiveRecordingDuration();
+        const remainingTime = MAX_RECORDING_TIME - activeTime;
+        setRecordingTime(Math.max(0, remainingTime));
+        
+        // Only check limits during active recording (not when paused)
+        if (recordingState === 'recording') {
+          // Show warning when 1 minute left
+          if (remainingTime === WARNING_TIME) {
+            addToast({
+              type: 'warning',
+              title: 'Recording Limit Warning',
+              description: 'You have 1 minute remaining before automatic stop'
+            });
+          }
+          
+          // Auto-stop when limit reached
+          if (remainingTime <= 0) {
+            console.log('🎤 Maximum recording time reached, auto-stopping...');
+            addToast({
+              type: 'info',
+              title: 'Recording Complete',
+              description: 'Maximum recording time reached. Processing your audio...'
+            });
+            
+            // Stop recording automatically
+            if (audioRecorder.isRecording()) {
+              audioRecorder.stopRecording();
+            }
+          }
+        }
       }, 1000);
     } else if (recordingState === 'idle') {
-      setRecordingTime(0);
+      setRecordingTime(MAX_RECORDING_TIME);
     }
-    // Keep timer frozen when paused
+    
     return () => clearInterval(interval);
-  }, [recordingState]);
+  }, [recordingState, audioRecorder, addToast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimeWarningClass = (seconds: number) => {
+    if (seconds <= WARNING_TIME) {
+      return 'text-red-200 animate-pulse';
+    }
+    return '';
   };
 
   const startRecording = async () => {
@@ -153,7 +195,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       // Start recording
       await audioRecorder.startRecording();
       setRecordingState('recording');
-      setRecordingTime(0);
+      setRecordingTime(MAX_RECORDING_TIME);
       console.log('🎤 Recording started successfully');
       
       addToast({
@@ -286,7 +328,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       if (uploadAbortController) {
         try {
           uploadAbortController.abort();
-        } catch (error) {
+        } catch {
           // Ignore abort errors during cleanup
           console.log('📤 Upload aborted during cleanup (expected)');
         }
@@ -331,7 +373,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       audioRecorder.cancelRecording();
     }
     setRecordingState('idle');
-    setRecordingTime(0);
+    setRecordingTime(MAX_RECORDING_TIME);
     setError('');
   };
 
@@ -341,7 +383,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       console.log('📤 Canceling upload...');
       try {
         uploadAbortController.abort();
-      } catch (error) {
+      } catch {
         // Ignore abort errors as they're expected
         console.log('📤 Upload aborted (expected)');
       }
@@ -538,9 +580,36 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             }
           </div>
           
-          {/* Error message */}
+          {/* Error message with retry option */}
           {error && (
-            <div className="text-red-200 text-sm mb-4">{error}</div>
+            <div className="text-red-200 text-sm mb-4">
+              <div className="mb-2">{error}</div>
+              <button
+                onClick={async () => {
+                  if (currentNoteId) {
+                    try {
+                      const response = await fetch(`/api/process-audio/${currentNoteId}`, {
+                        method: 'POST',
+                        credentials: 'include'
+                      })
+                      if (response.ok) {
+                        setError('')
+                        addToast({
+                          type: 'info',
+                          title: 'Retry Started',
+                          description: 'Attempting to process your audio again...'
+                        })
+                      }
+                    } catch (err) {
+                      console.error('Retry failed:', err)
+                    }
+                  }
+                }}
+                className="text-white underline hover:no-underline text-sm"
+              >
+                Try again
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -554,8 +623,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     return (
       <div className="flex justify-center">
         <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
-          {/* Timer */}
-          <div className="text-3xl font-bold mb-6 tracking-wide">
+          {/* Countdown Timer */}
+          <div className={`text-3xl font-bold mb-6 tracking-wide ${getTimeWarningClass(recordingTime)}`}>
             {formatTime(recordingTime)}
           </div>
           
