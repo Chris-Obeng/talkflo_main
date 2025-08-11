@@ -5,28 +5,24 @@ export function SocialProof() {
       role: "Startup Founder",
       quote:
         "Talkflo turned my car-ride thoughts into investor-ready emails. It feels like having a writing assistant in my pocket.",
-      avatar: "😄",
     },
     {
       name: "Marcus Lee",
       role: "Product Manager",
       quote:
         "Meeting notes used to be chaos. Now I speak, and Talkflo gives me action items and a perfect summary in seconds.",
-      avatar: "🧠",
     },
     {
       name: "Sara Patel",
       role: "Graduate Student",
       quote:
         "I brainstorm out loud and get clean, structured research notes. It legitimately saves hours every week.",
-      avatar: "📚",
     },
     {
       name: "Daniel Carter",
       role: "Content Creator",
       quote:
         "From voice memos to publish-ready scripts—without friction. The fact that it’s free is wild.",
-      avatar: "🎥",
     },
   ];
 
@@ -57,18 +53,17 @@ export function SocialProof() {
         </div>
 
         {/* Testimonials */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {testimonials.map((t, i) => (
             <div
               key={i}
-              className="glass-card rounded-2xl p-6 hover:shadow-lg transition-shadow"
+              className="glass-card rounded-2xl p-6 border border-slate-200/60 bg-white/80 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="text-4xl mb-3" aria-hidden>
-                {t.avatar}
-              </div>
-              <p className="text-slate-700">“{t.quote}”</p>
-              <div className="mt-4 text-sm text-slate-500">
-                <span className="font-semibold text-slate-700">{t.name}</span> · {t.role}
+              <p className="text-slate-800 leading-relaxed italic">“{t.quote}”</p>
+              <div className="mt-6 text-sm text-slate-500">
+                <span className="font-semibold text-slate-800">{t.name}</span>
+                <span className="mx-1">·</span>
+                <span>{t.role}</span>
               </div>
             </div>
           ))}
