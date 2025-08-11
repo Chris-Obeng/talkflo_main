@@ -5,13 +5,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: 'https://talkflo.co',
       lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 1,
+      changeFrequency: 'monthly',
+      priority: 0.9,
     },
     {
       url: 'https://talkflo.co/landing',
       lastModified: new Date(),
-      changeFrequency: 'monthly',
+      changeFrequency: 'weekly',
       priority: 0.8,
     },
   ]

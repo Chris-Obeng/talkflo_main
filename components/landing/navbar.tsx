@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Mic } from "lucide-react";
 
 export function LandingNavbar() {
   return (
@@ -11,11 +12,7 @@ export function LandingNavbar() {
           <div className="flex items-center">
             <Link href="/landing" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow ring-1 ring-white/30">
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z"/>
-                  <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
-                  <path d="M12 18v4M8 22h8"/>
-                </svg>
+                <Mic aria-hidden="true" className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900">Talkflo</span>
             </Link>

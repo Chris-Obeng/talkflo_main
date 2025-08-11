@@ -7,4 +7,9 @@
 User-agent: *
 Allow: /
 
+# Disallow internal app-only routes
+Disallow: /protected/
+Disallow: /auth/
+Disallow: /api/
+
 Sitemap: https://talkflo.co/sitemap.xml

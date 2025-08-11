@@ -16,16 +16,30 @@ const defaultUrl = process.env.VERCEL_URL
   : "http://localhost:3000";
 
 export const metadata: Metadata = {
-  title: "Talkflo - AI-Powered Voice-to-Text Transcription",
+  title: {
+    absolute: "Talkflo - AI-Powered Voice-to-Text Transcription",
+  },
   description: "Tired of typing? Turn your voice into perfectly formatted text, articles, and notes with Talkflo. Our AI captures your ideas so you can focus on what matters.",
   openGraph: {
     title: "Talkflo - AI-Powered Voice-to-Text Transcription",
     description: "Tired of typing? Turn your voice into perfectly formatted text, articles, and notes with Talkflo. Our AI captures your ideas so you can focus on what matters.",
     url: `${defaultUrl}/landing`,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "Talkflo - AI-Powered Voice-to-Text Transcription",
     description: "Tired of typing? Turn your voice into perfectly formatted text, articles, and notes with Talkflo. Our AI captures your ideas so you can focus on what matters.",
+    images: ["/twitter-image"],
+  },
+  alternates: {
+    canonical: "/landing",
   },
 };
 
