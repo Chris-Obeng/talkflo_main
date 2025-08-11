@@ -93,16 +93,6 @@ export function CoreFeatures() {
           ))}
         </div>
 
-        {/* Feature highlight */}
-        <div className="mt-16 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-8 text-white text-center">
-          <h3 className="text-2xl font-bold mb-4">
-            99.5% Accuracy Rate
-          </h3>
-          <p className="text-orange-100 text-lg max-w-2xl mx-auto">
-            Our advanced AI delivers industry-leading transcription accuracy, 
-            understanding context, accents, and technical terminology with precision.
-          </p>
-        </div>
       </div>
     </section>
   );

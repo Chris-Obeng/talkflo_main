@@ -22,15 +22,6 @@ export function LandingNavbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-slate-600 hover:text-slate-900 transition-colors">
-              Features
-            </Link>
-            <Link href="#pricing" className="text-slate-600 hover:text-slate-900 transition-colors">
-              Pricing
-            </Link>
-            <Link href="#faq" className="text-slate-600 hover:text-slate-900 transition-colors">
-              FAQ
-            </Link>
             <Link href="/auth/login" className="text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>

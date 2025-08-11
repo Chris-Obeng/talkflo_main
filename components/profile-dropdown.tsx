@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LogOut, User, Mail } from "lucide-react";
 
 interface ProfileDropdownProps {
   userEmail: string;
@@ -44,33 +45,36 @@ export function ProfileDropdown({ userEmail, children }: ProfileDropdownProps) {
           {children}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-56 bg-white border border-gray-200 shadow-lg z-[60]" 
+      <DropdownMenuContent
+        className="w-64 bg-white rounded-xl shadow-2xl border-gray-200 z-[60] p-2"
         align="start"
-        sideOffset={8}
+        sideOffset={12}
         avoidCollisions={true}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <DropdownMenuLabel className="text-gray-900 px-3 py-2">
-          Hey, {displayName}!
+        <DropdownMenuLabel className="px-3 py-2">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <User className="text-gray-500" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">
+                Hey, {displayName}!
+              </p>
+              <p className="text-xs text-gray-500">{userEmail}</p>
+            </div>
+          </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          className="text-gray-600 text-sm px-3 py-2 focus:bg-transparent"
-          disabled
-        >
-          {userEmail}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-2" />
         <DropdownMenuItem
           onClick={logout}
           disabled={isLoggingOut}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer px-3 py-2 focus:bg-red-50 focus:text-red-700"
+          className="group text-red-500 hover:text-red-600 focus:text-red-600 hover:bg-red-50 focus:bg-red-50 rounded-md cursor-pointer transition-colors duration-200 ease-in-out px-3 py-2 flex items-center"
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
-          </svg>
-          {isLoggingOut ? 'Logging out...' : 'Logout'}
+          <LogOut className="w-4 h-4 mr-3 text-red-500 group-hover:text-red-600" />
+          <span className="font-medium">
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

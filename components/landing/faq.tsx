@@ -23,14 +23,6 @@ export function FAQ() {
       answer: "Yes! Every transcription comes with a built-in editor where you can make adjustments, add formatting, and refine the output. You can also set custom vocabulary, preferred writing styles, and formatting preferences to match your needs perfectly."
     },
     {
-      question: "Do you offer refunds?",
-      answer: "We offer a 30-day money-back guarantee on all paid plans, no questions asked. If you're not completely satisfied with Talkflo, contact our support team within 30 days of your purchase for a full refund."
-    },
-    {
-      question: "How does the free plan work?",
-      answer: "The free plan includes 30 minutes of transcription per month with basic features and watermarked exports. It's perfect for trying out Talkflo and seeing how it fits your workflow. You can upgrade anytime to unlock unlimited recording and premium features."
-    },
-    {
       question: "Can I use Talkflo offline?",
       answer: "Currently, Talkflo requires an internet connection for real-time AI processing. However, you can record audio offline in our mobile app, and it will automatically sync and transcribe when you're back online."
     },
@@ -44,7 +36,7 @@ export function FAQ() {
     },
     {
       question: "Can I integrate Talkflo with other tools?",
-      answer: "Premium and Enterprise plans include integrations with popular tools like Google Docs, Notion, Slack, and more. Our API (coming soon) will allow custom integrations with your existing workflow and applications."
+      answer: "Talkflo includes integrations with popular tools like Google Docs, Notion, Slack, and more. Our API (coming soon) will allow custom integrations with your existing workflow and applications."
     }
   ];
 
@@ -103,25 +95,6 @@ export function FAQ() {
           ))}
         </div>
 
-        {/* Still have questions? */}
-        <div className="mt-16 text-center">
-          <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-2xl p-8 border border-orange-200">
-            <h3 className="text-2xl font-bold text-slate-900 mb-4">
-              Still Have Questions?
-            </h3>
-            <p className="text-slate-600 mb-6">
-              Our friendly support team is here to help you get the most out of Talkflo.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200">
-                Contact Support
-              </button>
-              <button className="border-2 border-orange-300 text-orange-700 px-6 py-3 rounded-lg font-semibold hover:bg-orange-50 transition-colors">
-                Schedule Demo
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

@@ -31,13 +31,13 @@ export default async function ProtectedPage() {
             </ProfileDropdown>
           </div>
 
-          {/* Center - Prime Banner */}
+          {/* Center - Support Banner */}
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-full px-3 py-1 text-xs text-slate-700 font-semibold">
-              Talkflo Prime
-            </div>
-            <span className="text-slate-300 text-sm font-normal">
-              If you like Talkflo, you&apos;ll love Talkflo Prime.
+            <button className="bg-white rounded-full px-3 py-1 text-xs text-slate-700 font-semibold">
+              Support Talkflo
+            </button>
+            <span className="text-slate-300 text-sm font-normal hidden sm:inline">
+              Support us to keep Talkflo online
             </span>
           </div>
 
