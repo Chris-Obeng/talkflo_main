@@ -250,6 +250,20 @@ export function NoteModal({
     // You could show a toast notification here
   };
 
+  const handleCopyTranscript = useCallback(() => {
+    if (!note?.original_transcript) return;
+    navigator.clipboard.writeText(note.original_transcript);
+  }, [note]);
+
+  const handleCopyTranscriptAndNote = useCallback(() => {
+    if (!note) return;
+    const transcript = note.original_transcript ?? '';
+    const content = (renderedContent ?? note.processed_content ?? '').trim();
+    const titleBlock = note.title ? `${note.title}\n\n` : '';
+    const combined = `${transcript}\n\n---\n\n${titleBlock}${content}`.trim();
+    navigator.clipboard.writeText(combined);
+  }, [note, renderedContent]);
+
   const toggleTranscript = () => {
     setShowTranscript(!showTranscript);
   };
@@ -652,6 +666,24 @@ export function NoteModal({
                     <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
                       {note.original_transcript}
                     </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <button
+                        onClick={handleCopyTranscript}
+                        className="text-orange-600 hover:text-orange-700 font-medium text-sm underline-offset-4 hover:underline flex items-center gap-1"
+                        aria-label="Copy transcript"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copy transcript
+                      </button>
+                      <button
+                        onClick={handleCopyTranscriptAndNote}
+                        className="text-orange-600 hover:text-orange-700 font-medium text-sm underline-offset-4 hover:underline flex items-center gap-1"
+                        aria-label="Copy transcript and note"
+                      >
+                        Copy transcript + note
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
