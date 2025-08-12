@@ -51,7 +51,7 @@ export function FAQ() {
           </h2>
           <p className="text-xl text-slate-600">
             Everything you need to know about Talkflo. Can&apos;t find what you&apos;re looking for? 
-            <a href="mailto:christopherobeng.dev@gmail.com" className="text-orange-500 hover:text-orange-600 underline ml-1">
+            <a href="mailto:talkflo.dev@gmail.com" className="text-orange-500 hover:text-orange-600 underline ml-1">
               Contact our support team
             </a>.
           </p>

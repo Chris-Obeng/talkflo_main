@@ -86,18 +86,18 @@ export function TalkfloMain() {
       {/* Main Content */}
       <div className="pt-12 pb-2 w-full max-w-none">
         {/* Main Branding - exactly like AudioPen */}
-        <div className="text-center mb-12 mt-12">
+        <div className="text-center mb-6 mt-12">
           <h1 className="text-5xl sm:text-6xl font-serif text-gray-600 mb-3 tracking-tight font-normal">
             Talkflo
           </h1>
           <div className="w-12 h-0.5 bg-orange-500 mx-auto mb-6"></div>
           <p className="text-xl text-gray-500 font-light">
-            Go from fuzzy thought to clear text. <em className="font-normal italic">Fast.</em>
+            Say it messy. We write it clean. <em className="font-normal italic">In seconds.</em>
           </p>
         </div>
 
         {/* Recording Widget - shows in center when active */}
-        <div className="mb-12 flex justify-center">
+        <div className="mb-6 flex justify-center">
           <RecordingWidget 
             ref={recordingWidgetRef} 
             onStateChange={handleRecordingStateChange}

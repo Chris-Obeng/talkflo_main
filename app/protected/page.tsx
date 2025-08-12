@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { TalkfloMain } from "@/components/talkflo-main";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { SupportModal } from "@/components/support-modal";
+import { FullPageLoader } from "@/components/ui/full-page-loader";
 import type { User } from "@supabase/supabase-js";
 
 export default function ProtectedPage() {
@@ -30,11 +31,7 @@ export default function ProtectedPage() {
   }, [router, supabase.auth]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f5f0eb] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
-      </div>
-    );
+    return <FullPageLoader />;
   }
 
   if (!user) {

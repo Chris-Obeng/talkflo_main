@@ -236,11 +236,11 @@ export function NotesDashboard({ onShowUpload, onReady, onSelectionChange }: Not
             <div 
               className="w-full h-12 rounded-2xl overflow-hidden"
               style={{
-                background: "rgba(255, 255, 255, 0.25)",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)",
+                background: "rgba(255, 255, 255, 0.1)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                boxShadow: "0 4px 16px 0 rgba(0, 0, 0, 0.05)",
               }}
             >
               <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
@@ -249,7 +249,7 @@ export function NotesDashboard({ onShowUpload, onReady, onSelectionChange }: Not
         </div>
         
         {/* Note Cards Skeleton */}
-        <NoteSkeleton count={8} delay={300} />
+        <NoteSkeleton count={8} />
       </div>
     );
   }
