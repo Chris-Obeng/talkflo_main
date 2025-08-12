@@ -5,7 +5,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
+    gtag?: {
+      (command: "config", targetId: string, config?: Record<string, unknown>): void;
+      (command: "event", eventName: string, params?: Record<string, unknown>): void;
+      (command: "js", date: Date): void;
+      // Fallback signature for unforeseen commands; keeps type-safe over `any`.
+      (command: string, ...args: unknown[]): void;
+    };
   }
 }
 

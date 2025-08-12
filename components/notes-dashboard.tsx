@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { NoteModal } from "./note-modal";
 import { NoteSkeleton } from "./ui/note-skeleton";
 import { Tag, Search } from "lucide-react";
@@ -116,7 +116,7 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = useCallback(async () => {
     if (selectedNoteIds.length === 0) return;
     if (window.confirm(`Are you sure you want to delete ${selectedNoteIds.length} selected notes?`)) {
       const originalNotes = [...notes];
@@ -137,11 +137,11 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
         addToast({ type: 'error', title: 'Failed to delete notes', description: 'Please try again.' });
       }
     }
-  };
+  }, [selectedNoteIds, notes, removeNote, upsertNote, addToast]);
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelectedNoteIds([]);
-  };
+  }, []);
 
   const handleDuplicateNote = (noteId: string) => {
     // TODO: Implement note duplication
