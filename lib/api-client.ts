@@ -20,7 +20,6 @@ export class ApiClient {
   ): Promise<{ success: boolean; noteId?: string; error?: string }> {
     try {
       console.log('🔐 Checking authentication...');
-      // Get current user
       const { data: { user }, error: authError } = await this.supabase.auth.getUser()
       if (authError || !user) {
         console.error('🔐 Authentication failed:', authError);
@@ -28,115 +27,131 @@ export class ApiClient {
       }
       console.log('🔐 User authenticated:', user.id);
 
-      // Create FormData for file upload with proper file extension
+      // Derive a safe file extension based on blob type
       const fileExtension = audioBlob.type.includes('webm') ? '.webm' : 
                            audioBlob.type.includes('mp4') ? '.mp4' : 
-                           audioBlob.type.includes('wav') ? '.wav' : '.webm'
-      const properFileName = fileName.replace(/\.[^/.]+$/, '') + fileExtension
-      
-      const formData = new FormData()
-      formData.append('audio', audioBlob, properFileName)
-      if (appendToNoteId) {
-        formData.append('appendToNoteId', appendToNoteId)
-        console.log('📦 Adding appendToNoteId to form data:', appendToNoteId);
-      }
-      console.log('📦 Created form data with audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type, 'filename:', properFileName, appendToNoteId ? `appending to note: ${appendToNoteId}` : 'creating new note');
+                           audioBlob.type.includes('wav') ? '.wav' : 
+                           audioBlob.type.includes('m4a') ? '.m4a' : 
+                           audioBlob.type.includes('aac') ? '.aac' : '.webm'
+      // Normalize file name (currently unused, kept for future metadata; avoid lint error)
+      void fileName.replace(/\.[^/.]+$/, '')
 
-      // Use XMLHttpRequest for real upload progress tracking
-      console.log('📤 Sending upload request to /api/upload-audio...');
-      
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        // Handle abort signal
-        if (abortSignal) {
-          abortSignal.addEventListener('abort', () => {
-            xhr.abort();
-          });
+      // Generate storage path: userId/timestamp-random.ext
+      const randomSuffix = Math.random().toString(36).substring(7)
+      const storagePath = `${user.id}/${Date.now()}-${randomSuffix}${fileExtension}`
+
+      // Start progress
+      onProgress?.(0)
+      console.log('📤 Uploading directly to Supabase Storage:', storagePath, 'type:', audioBlob.type, 'size:', audioBlob.size)
+
+      // Upload directly to Supabase Storage to avoid serverless body limits
+      const { data: uploadData, error: uploadError } = await this.supabase
+        .storage
+        .from('audio-files')
+        .upload(storagePath, audioBlob, {
+          contentType: audioBlob.type || 'application/octet-stream',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('📤 Storage upload error:', uploadError)
+        throw new Error(`Storage upload failed: ${uploadError.message}`)
+      }
+
+      console.log('📤 File uploaded to storage at:', uploadData?.path)
+      // Update progress to near-complete; DB ops follow
+      onProgress?.(90)
+
+      // Get public URL for the uploaded file
+      const { data: publicUrlData } = this.supabase
+        .storage
+        .from('audio-files')
+        .getPublicUrl(storagePath)
+
+      const publicUrl = publicUrlData.publicUrl
+
+      // Create or update note record
+      let noteId: string | undefined
+
+      if (appendToNoteId) {
+        console.log('🗒️ Appending uploaded audio to existing note:', appendToNoteId)
+        const { data: updatedNote, error: updateError } = await this.supabase
+          .from('notes')
+          .update({
+            audio_url: publicUrl,
+            audio_duration: null,
+            status: 'processing'
+          })
+          .eq('id', appendToNoteId)
+          .eq('user_id', user.id)
+          .select('*')
+          .single()
+
+        if (updateError || !updatedNote) {
+          console.error('🗒️ Failed to update note with new audio:', updateError)
+          // Best-effort cleanup of the uploaded file
+          await this.supabase.storage.from('audio-files').remove([storagePath])
+          throw new Error(updateError?.message || 'Note not found or access denied')
         }
-        
-        // Track upload progress
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable && onProgress) {
-            const progress = Math.round((event.loaded / event.total) * 100);
-            console.log('📤 Upload progress:', progress + '%');
-            onProgress(progress);
-          }
-        });
-        
-        // Handle completion
-        xhr.addEventListener('load', () => {
-          console.log('📤 Upload response status:', xhr.status);
-          
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              console.log('📤 Upload success:', data);
-              
-              if (!data.noteId) {
-                reject(new Error('API did not return a noteId'));
-                return;
-              }
-              
-              resolve({
-                success: true,
-                noteId: data.noteId
-              });
-            } catch (parseError) {
-              console.error('📤 Failed to parse response:', parseError);
-              reject(new Error('Invalid response from server'));
+
+        noteId = updatedNote.id
+      } else {
+        console.log('🗒️ Creating new note for uploaded audio')
+        const { data: newNote, error: insertError } = await this.supabase
+          .from('notes')
+          .insert({
+            user_id: user.id,
+            title: 'Processing…',
+            audio_url: publicUrl,
+            audio_duration: null,
+            status: 'processing'
+          })
+          .select('*')
+          .single()
+
+        if (insertError || !newNote) {
+          console.error('🗒️ Failed to create note for uploaded audio:', insertError)
+          await this.supabase.storage.from('audio-files').remove([storagePath])
+          throw new Error(insertError?.message || 'Database error')
+        }
+
+        noteId = newNote.id
+      }
+
+      // Trigger processing via webhook handler (does not require large payload)
+      try {
+        const webhookUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/webhook-handler`
+        fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            type: 'audio_uploaded',
+            data: {
+              noteId,
+              userId: user.id,
+              isAppend: !!appendToNoteId
             }
-          } else {
-            let errorDetails;
-            try {
-              const errorText = xhr.responseText;
-              console.error('📤 Raw error response:', errorText);
-              
-              // Try to parse as JSON
-              try {
-                errorDetails = JSON.parse(errorText);
-              } catch {
-                errorDetails = { error: errorText || `HTTP ${xhr.status}: ${xhr.statusText}` };
-              }
-            } catch (readError) {
-              console.error('📤 Failed to read error response:', readError);
-              errorDetails = { error: `HTTP ${xhr.status}: ${xhr.statusText}` };
-            }
-            
-            console.error('📤 Upload API error:', errorDetails);
-            reject(new Error(errorDetails.error || `Upload failed with status ${xhr.status}`));
-          }
-        });
-        
-        // Handle network errors
-        xhr.addEventListener('error', () => {
-          console.error('📤 Upload network error');
-          reject(new Error('Network error during upload'));
-        });
-        
-        // Handle abort
-        xhr.addEventListener('abort', () => {
-          console.log('📤 Upload aborted');
-          reject(new Error('Upload canceled'));
-        });
-        
-        // Configure and send request
-        xhr.open('POST', '/api/upload-audio');
-        xhr.withCredentials = true; // Include cookies for authentication
-        xhr.send(formData);
-      });
-      
+          })
+        }).catch((err) => {
+          console.error('Failed to trigger processing webhook:', err)
+        })
+      } catch (err) {
+        console.error('Error triggering webhook:', err)
+      }
+
+      onProgress?.(100)
+      return { success: true, noteId }
+
     } catch (error) {
       console.error('📤 Upload error:', error)
-      
-      // Handle abort error specifically
+
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Upload canceled')) {
-        return {
-          success: false,
-          error: 'Upload canceled'
-        }
+        return { success: false, error: 'Upload canceled' }
       }
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'

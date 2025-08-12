@@ -36,6 +36,7 @@ export function AudioUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
 
   // Supported audio formats
   const supportedFormats = [
@@ -52,7 +53,8 @@ export function AudioUpload({
     'audio/flac'
   ];
 
-  const maxFileSize = 50 * 1024 * 1024; // 50MB
+  // Client-side guidance only; direct-to-storage handles larger files, but we keep UX guardrails
+  const maxFileSize = 200 * 1024 * 1024; // 200MB
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -173,12 +175,6 @@ export function AudioUpload({
       }
 
       console.log('📤 File upload successful:', result.noteId);
-      
-      addToast({
-        type: 'success',
-        title: 'Upload Complete',
-        description: 'Your audio file is now being processed'
-      });
 
       onUploadComplete?.(result.noteId!);
       
@@ -339,11 +335,41 @@ export function AudioUpload({
           </div>
           
           <button
-            onClick={handleCancel}
+            onClick={() => setShowConfirmCancel(true)}
             className="text-blue-600 hover:text-blue-800 text-sm underline hover:no-underline transition-colors"
           >
             Cancel Upload
           </button>
+
+          {showConfirmCancel && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.07L13.93 4.93a2 2 0 00-3.86 0L3 17.07A2 2 0 005.07 19z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-gray-900 font-semibold">Cancel upload?</h4>
+                </div>
+                <p className="text-sm text-gray-600 mb-5">This will stop the current upload and discard progress.</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowConfirmCancel(false)}
+                    className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    Keep uploading
+                  </button>
+                  <button
+                    onClick={() => { setShowConfirmCancel(false); handleCancel(); }}
+                    className="px-3 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

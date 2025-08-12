@@ -30,9 +30,10 @@ export class AudioRecorder {
         }
       })
 
-      // Create MediaRecorder
+      // Create MediaRecorder with lower bitrate to keep files small (~48kbps)
       this.mediaRecorder = new MediaRecorder(this.audioStream, {
-        mimeType: this.getSupportedMimeType()
+        mimeType: this.getSupportedMimeType(),
+        audioBitsPerSecond: 48_000
       })
 
       // Reset chunks

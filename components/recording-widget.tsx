@@ -41,6 +41,9 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [uploadAbortController, setUploadAbortController] = useState<AbortController | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showConfirmCancelRecording, setShowConfirmCancelRecording] = useState(false);
+  const [showConfirmCancelUpload, setShowConfirmCancelUpload] = useState(false);
+  const [showConfirmCancelFileUpload, setShowConfirmCancelFileUpload] = useState(false);
   
   // Use standard client polling for note processing status
   const { note: processingNote, isCompleted, hasFailed, isProcessing } = useNoteProcessingStatus(currentNoteId);
@@ -57,24 +60,47 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
 
     if (isCompleted) {
       console.log('✅ Processing completed!', processingNote);
-      addToast({
-        type: 'success',
-        title: 'Note Ready!',
-        description: 'Your audio has been transcribed and enhanced'
-      });
       setRecordingState('idle');
       setCurrentNoteId(null); // Stop monitoring this note
     } else if (hasFailed) {
       console.log('❌ Processing failed for note:', processingNote.id);
       const errorMsg = processingNote.error_message || 'Audio processing failed';
       setError(errorMsg);
-      addToast({
-        type: 'error',
-        title: 'Processing Failed',
-        description: 'Your audio was uploaded but processing failed. You can still access the audio file from your notes.'
-      });
-      setRecordingState('idle');
-      setCurrentNoteId(null); // Stop monitoring this note
+      // Attempt automatic fallback processing
+      (async () => {
+        try {
+          const response = await fetch(`/api/process-audio/${processingNote.id}`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+          if (response.ok) {
+            setError('');
+            addToast({
+              type: 'info',
+              title: 'Applied Fallback',
+              description: 'Processing failed; added a placeholder note so you can continue.'
+            });
+            // Keep monitoring until completed
+            setRecordingState('processing');
+          } else {
+            addToast({
+              type: 'error',
+              title: 'Processing Failed',
+              description: 'Your audio was uploaded but processing failed. You can still access the audio file from your notes.'
+            });
+            setRecordingState('idle');
+            setCurrentNoteId(null);
+          }
+        } catch {
+          addToast({
+            type: 'error',
+            title: 'Processing Failed',
+            description: 'Your audio was uploaded but processing failed. You can still access the audio file from your notes.'
+          });
+          setRecordingState('idle');
+          setCurrentNoteId(null);
+        }
+      })();
     } else if (isProcessing) {
       // Keep the processing state active
       if (recordingState !== 'processing') {
@@ -197,12 +223,6 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       setRecordingState('recording');
       setRecordingTime(MAX_RECORDING_TIME);
       console.log('🎤 Recording started successfully');
-      
-      addToast({
-        type: 'info',
-        title: 'Recording Started',
-        description: 'Speak now, your audio is being recorded'
-      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to start recording';
       console.error('🎤 Start recording error:', error);
@@ -276,12 +296,6 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       // Move to processing state
       console.log('🤖 Starting AI processing for note:', result.noteId);
       setRecordingState('processing');
-      
-      addToast({
-        type: 'info',
-        title: 'Processing Started',
-        description: 'AI is transcribing and enhancing your audio...'
-      });
       
       // Start monitoring for results
       console.log('🔄 Starting monitoring for note:', result.noteId);
@@ -418,12 +432,6 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     setCurrentNoteId(noteId);
     setShowUpload(false);
     
-    addToast({
-      type: 'info',
-      title: 'Processing Started',
-      description: 'AI is transcribing and enhancing your audio file...'
-    });
-    
     // Notify parent component that a note was created
     onNoteCreated?.(noteId);
   };
@@ -443,10 +451,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Upload dialog state
   if (showUpload && recordingState === 'idle') {
     return (
-      <div className="flex justify-center">
-        <div className="bg-white rounded-3xl px-12 py-8 w-96 shadow-xl border border-gray-200">
+      <div className="flex justify-center px-4 sm:px-0">
+        <div className="bg-white rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 shadow-xl border border-gray-200">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900">Upload Audio File</h3>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Upload Audio File</h3>
             <button
               onClick={() => setShowUpload(false)}
               className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
@@ -473,8 +481,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // File uploading state
   if (recordingState === 'file-uploading') {
     return (
-      <div className="flex justify-center">
-        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4 sm:px-0">
+        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
           {/* Loading dots */}
           <div className="flex justify-center mb-6 space-x-2">
             <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
@@ -501,11 +509,41 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           
           {/* Cancel link */}
           <button 
-            onClick={handleFileUploadCancel}
+            onClick={() => setShowConfirmCancelFileUpload(true)}
             className="text-white underline hover:no-underline transition-all text-sm font-light"
           >
             cancel
           </button>
+
+          {showConfirmCancelFileUpload && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.07L13.93 4.93a2 2 0 00-3.86 0L3 17.07A2 2 0 005.07 19z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-gray-900 font-semibold">Cancel file upload?</h4>
+                </div>
+                <p className="text-sm text-gray-600 mb-5">This will stop the current file upload and discard progress.</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowConfirmCancelFileUpload(false)}
+                    className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    Keep uploading
+                  </button>
+                  <button
+                    onClick={() => { setShowConfirmCancelFileUpload(false); handleFileUploadCancel(); }}
+                    className="px-3 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -519,8 +557,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Upload state
   if (recordingState === 'uploading') {
     return (
-      <div className="flex justify-center">
-        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4 sm:px-0">
+        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
           {/* Loading dots */}
           <div className="flex justify-center mb-6 space-x-2">
             <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
@@ -547,11 +585,41 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           
           {/* Cancel link */}
           <button 
-            onClick={cancelUpload}
+            onClick={() => setShowConfirmCancelUpload(true)}
             className="text-white underline hover:no-underline transition-all text-sm font-light"
           >
             cancel
           </button>
+
+          {showConfirmCancelUpload && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.07L13.93 4.93a2 2 0 00-3.86 0L3 17.07A2 2 0 005.07 19z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-gray-900 font-semibold">Cancel upload?</h4>
+                </div>
+                <p className="text-sm text-gray-600 mb-5">This will stop the current upload and discard progress.</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowConfirmCancelUpload(false)}
+                    className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    Keep uploading
+                  </button>
+                  <button
+                    onClick={() => { setShowConfirmCancelUpload(false); cancelUpload(); }}
+                    className="px-3 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -560,8 +628,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Processing state
   if (recordingState === 'processing') {
     return (
-      <div className="flex justify-center">
-        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4 sm:px-0">
+        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
           {/* Processing animation */}
           <div className="flex justify-center mb-6">
             <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
@@ -621,10 +689,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     const isRecording = recordingState === 'recording';
     
     return (
-      <div className="flex justify-center">
-        <div className="bg-orange-500 rounded-3xl px-12 py-8 w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4 sm:px-0">
+        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
           {/* Countdown Timer */}
-          <div className={`text-3xl font-bold mb-6 tracking-wide ${getTimeWarningClass(recordingTime)}`}>
+          <div className={`text-2xl sm:text-3xl font-bold mb-6 tracking-wide ${getTimeWarningClass(recordingTime)}`}>
             {formatTime(recordingTime)}
           </div>
           
@@ -675,7 +743,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             {/* Stop button */}
             <button 
               onClick={stopRecording}
-              className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg relative -mb-8"
+              className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg relative -mb-8"
               title="Stop recording"
             >
               <div className="w-5 h-5 bg-orange-500 rounded-sm"></div>
@@ -683,7 +751,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             
             {/* Cancel/Close button */}
             <button 
-              onClick={cancelRecording}
+              onClick={() => setShowConfirmCancelRecording(true)}
               className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
               title="Cancel recording"
             >
@@ -692,6 +760,36 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
               </svg>
             </button>
           </div>
+
+          {showConfirmCancelRecording && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86A2 2 0 0021 17.07L13.93 4.93a2 2 0 00-3.86 0L3 17.07A2 2 0 005.07 19z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-gray-900 font-semibold">Discard this recording?</h4>
+                </div>
+                <p className="text-sm text-gray-600 mb-5">If you cancel now, the current audio will be lost.</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowConfirmCancelRecording(false)}
+                    className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    Keep recording
+                  </button>
+                  <button
+                    onClick={() => { setShowConfirmCancelRecording(false); cancelRecording(); }}
+                    className="px-3 py-2 rounded-lg text-sm text-white bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, discard
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

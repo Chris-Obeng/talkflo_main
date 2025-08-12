@@ -35,10 +35,10 @@ export async function POST(
       )
     }
 
-    // Check if note is stuck in processing
-    if (note.status !== 'processing') {
+    // If note has failed, allow applying fallback as a recovery path
+    if (note.status !== 'processing' && note.status !== 'failed') {
       return NextResponse.json(
-        { error: 'Note is not in processing status' },
+        { error: 'Note is not eligible for fallback (status not processing/failed)' },
         { status: 400 }
       )
     }
@@ -64,7 +64,7 @@ To enable automatic transcription, configure the Google Gemini API key and deplo
     const { error: updateError } = await supabase
       .from('notes')
       .update({
-        original_transcript: 'Transcription not available - please configure API keys',
+        original_transcript: 'Transcription not available - fallback applied',
         processed_content: fallbackContent,
         status: 'completed',
         updated_at: new Date().toISOString()
