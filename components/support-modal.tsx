@@ -41,12 +41,15 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
   }, [isOpen, onClose])
 
   const handleDonation = (amount: number) => {
-    // Using Dodo Payments for now - will be replaced with final payment links later
-    const baseUrl = 'https://test.checkout.dodopayments.com/buy/pdt_NbDFxxJzUKVZ32wjtWLXL?quantity=1'
-    
-    // For now, all amounts go to the same Dodo payment link
-    // You can customize this later with different product IDs for different amounts
-    window.open(baseUrl, '_blank', 'noopener,noreferrer')
+    // Dodo Payments product links per amount
+    const urlByAmount: Record<number, string> = {
+      5: 'https://checkout.dodopayments.com/buy/pdt_sShrMgwjXkk2Has1z8LFU?quantity=1',
+      10: 'https://checkout.dodopayments.com/buy/pdt_ssoVhz9zhE5Tvo4NzqLb5?quantity=1',
+      20: 'https://checkout.dodopayments.com/buy/pdt_7mH0KP04DhPXaVHSHJTNw?quantity=1',
+    }
+
+    const url = urlByAmount[amount] ?? urlByAmount[5]
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
