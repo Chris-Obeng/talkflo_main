@@ -27,8 +27,8 @@ interface RecordingWidgetProps {
 export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated, appendToNoteId }, ref) => {
   console.log('🎤 RecordingWidget rendered with appendToNoteId:', appendToNoteId);
   
-  // Recording time limit configuration (15 minutes = 900 seconds)
-  const MAX_RECORDING_TIME = 900;
+  // Recording time limit configuration (10 minutes = 600 seconds)
+  const MAX_RECORDING_TIME = 600;
   const WARNING_TIME = 60; // Show warning when 1 minute left
   
   const appendToNoteIdRef = useRef<string | undefined>(appendToNoteId);

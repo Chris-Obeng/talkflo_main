@@ -96,6 +96,86 @@ html {
     box-shadow: 0 10px 30px rgba(2, 8, 23, 0.06);
   }
 
+  /* Subtle equalizer bars for hero demo */
+  @keyframes eqPulse {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.85; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+  .eq-bar {
+    transform-origin: bottom center;
+    animation-name: eqPulse;
+    animation-duration: var(--dur, 1.4s);
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  .eq-bar-glow {
+    box-shadow: 0 6px 14px rgba(251, 146, 60, 0.15);
+  }
+
+  /* Typing width reveal for text lines */
+  @keyframes widthReveal {
+    0% { width: 0; }
+    100% { width: var(--target-w, 85%); }
+  }
+  .typing-line {
+    width: 0;
+    animation: widthReveal var(--type-dur, 1.6s) ease forwards;
+    animation-delay: var(--delay, 0s);
+  }
+
+  /* Floating decorative blobs */
+  .blob-orange {
+    background: radial-gradient(circle at 30% 30%, rgba(251, 146, 60, 0.35), rgba(251, 146, 60, 0) 60%);
+    filter: blur(24px);
+    animation: slowFloat 9s ease-in-out infinite;
+  }
+  .blob-sky {
+    background: radial-gradient(circle at 70% 70%, rgba(14, 165, 233, 0.3), rgba(14, 165, 233, 0) 60%);
+    filter: blur(22px);
+    animation: slowFloat 10s ease-in-out infinite reverse;
+  }
+  @keyframes slowFloat {
+    0%,100% { transform: translate3d(0,0,0) scale(1); }
+    50% { transform: translate3d(6px, -8px, 0) scale(1.04); }
+  }
+
+  /* Sparkles */
+  .sparkle {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, #fff, rgba(255,255,255,0));
+    opacity: 0.6;
+    box-shadow: 0 0 16px rgba(255,255,255,0.8);
+    animation: twinkle 2.4s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { transform: scale(0.8); opacity: 0.4; }
+    50% { transform: scale(1.15) rotate(15deg); opacity: 0.9; }
+  }
+
+  /* Gentle bobbing for floating badge */
+  .bob {
+    animation: bobbing 3.6s ease-in-out infinite;
+  }
+  @keyframes bobbing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* Wave visualizer */
+  @keyframes waveDash {
+    to { stroke-dashoffset: -1200; }
+  }
+  .wave-path {
+    stroke-linecap: round;
+    stroke-dasharray: 12 12;
+    animation: waveDash 8s linear infinite;
+  }
+  .wave-path-slow {
+    animation-duration: 12s;
+  }
+
   .bg-grid-slate-100 {
     background-image: linear-gradient(to right, rgba(148, 163, 184, 0.15) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
