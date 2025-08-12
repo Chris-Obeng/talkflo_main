@@ -40,7 +40,7 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
       variant="outline"
       className="w-full"
       onClick={handleGoogleSignIn}
-      disabled={isLoading}
+      disabled={true}
     >
       <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
         <path
@@ -60,10 +60,7 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
           fill="#EA4335"
         />
       </svg>
-      {isLoading 
-        ? "Connecting..." 
-        : `Continue with Google`
-      }
+      {`Continue with Google (Coming Soon)`}
     </Button>
   );
 }
