@@ -5,6 +5,13 @@ import Link from "next/link";
 import type React from "react";
 import { Mic, FileText } from "lucide-react";
 
+type CSSVars = React.CSSProperties & {
+  ['--dur']?: string;
+  ['--target-w']?: string;
+  ['--delay']?: string;
+  ['--type-dur']?: string;
+};
+
 function generateWavePoints(width: number, height: number, cycles: number, amplitudeFactor = 0.35) {
   const points: string[] = [];
   const centerY = height / 2;
@@ -126,10 +133,8 @@ export function LandingHero() {
                           className="eq-bar eq-bar-glow w-1.5 rounded-full bg-gradient-to-t from-orange-500/85 to-orange-300"
                           style={{
                             animationDelay: `${i * 0.06}s`,
-                            // Slight duration variation across bars
-                            // @ts-ignore - CSS variable for animation duration
-                            ['--dur' as any]: `${1.2 + (i % 5) * 0.12}s`,
-                          } as React.CSSProperties}
+                            '--dur': `${1.2 + (i % 5) * 0.12}s`,
+                          } as CSSVars}
                         />
                       ))}
                     </div>
@@ -167,11 +172,10 @@ export function LandingHero() {
                         key={i}
                         className="typing-line h-3 rounded bg-stone-200/90 relative overflow-hidden"
                         style={{
-                          // @ts-ignore CSS custom properties
-                          ['--target-w' as any]: line.w,
-                          ['--delay' as any]: line.d,
-                          ['--type-dur' as any]: '1.8s',
-                        } as React.CSSProperties}
+                          '--target-w': line.w,
+                          '--delay': line.d,
+                          '--type-dur': '1.8s',
+                        } as CSSVars}
                       >
                         <span className="pointer-events-none absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                       </div>
