@@ -117,7 +117,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
         setRecordingState('processing');
       }
     }
-  }, [processingNote, isCompleted, hasFailed, isProcessing, recordingState, addToast, onNoteUpdated]);
+  }, [processingNote, isCompleted, hasFailed, isProcessing, recordingState, addToast, onNoteUpdated, onNoteProcessingCompleted]);
 
   // Timer for recording with countdown and automatic stop at limit
   useEffect(() => {

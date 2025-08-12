@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { X, Trash2, Copy, Image as ImageIcon, Share2, Plus, FileText, Tag, ChevronDown, ChevronUp, Wand2, Expand, Minimize, Maximize2 } from "lucide-react";
+import { X, Trash2, Copy, Image as ImageIcon, Share2, Plus, FileText, Tag, ChevronDown, ChevronUp, Wand2, Maximize2 } from "lucide-react";
 import { Note, UITag, Tag as TagType } from "@/lib/types";
 import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
@@ -352,20 +352,9 @@ export function NoteModal({
     setLocalContent(currentContent);
     setIsEditingContent(false);
   }, [note]);
-
-
-
-  // Simple auto-resize function without cursor interference
-  const autoResizeTextarea = useCallback((textarea: HTMLTextAreaElement) => {
-    if (!textarea) return;
-    
-    // Simple resize without cursor manipulation
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.max(textarea.scrollHeight, 60) + 'px';
-  }, []);
-
-
-
+ 
+ 
+ 
   // Safe guard after all hooks to preserve hook order
   if (!shouldRender || !note) return null;
 
