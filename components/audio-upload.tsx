@@ -37,6 +37,7 @@ export function AudioUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Supported audio formats
   const supportedFormats = [
@@ -89,10 +90,7 @@ export function AudioUpload({
     });
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     // Validate file type
     if (!supportedFormats.includes(file.type)) {
       const error = `Unsupported file format. Please select an audio file (MP3, WAV, M4A, etc.)`;
@@ -142,6 +140,40 @@ export function AudioUpload({
         title: 'File Processing Error',
         description: 'Could not process the selected file'
       });
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!disabled && !isUploading) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+
+    if (disabled || isUploading) return;
+
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      await processFile(file);
     }
   };
 
@@ -241,7 +273,7 @@ export function AudioUpload({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* File Input */}
       <input
         ref={fileInputRef}
@@ -252,56 +284,73 @@ export function AudioUpload({
         className="hidden"
       />
 
-      {/* Upload Button */}
+      {/* Upload Button with Drag & Drop */}
       {!selectedFile && !isUploading && (
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+        <div 
+          className={`text-center border-2 border-dashed rounded-lg p-3 transition-all duration-200 ${
+            isDragOver 
+              ? 'border-orange-400 bg-orange-50' 
+              : 'border-gray-300 hover:border-orange-300 hover:bg-orange-50/50'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          Upload Audio
-        </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="group relative inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-md transition-all duration-200 text-xs font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+          >
+            <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Choose Audio File
+            <div className="absolute inset-0 rounded-md bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+          </button>
+          <p className="mt-1.5 text-xs text-gray-500">
+            Drag and drop or click to browse
+          </p>
+        </div>
       )}
 
       {/* Selected File Info */}
       {selectedFile && !isUploading && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-gradient-to-r from-orange-50 to-orange-50/50 rounded-md p-2.5 border border-orange-200/50 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-2.5 h-2.5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                 </svg>
-                <span className="font-medium text-gray-900 truncate">{selectedFile.name}</span>
               </div>
-              <div className="text-sm text-gray-600 space-y-1">
-                <div>Size: {formatFileSize(selectedFile.size)}</div>
-                {selectedFile.duration && (
-                  <div>Duration: {formatDuration(selectedFile.duration)}</div>
-                )}
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-gray-900 block truncate text-xs">{selectedFile.name}</span>
+                <div className="text-xs text-gray-600 space-x-2">
+                  <span>{formatFileSize(selectedFile.size)}</span>
+                  {selectedFile.duration && (
+                    <span>{formatDuration(selectedFile.duration)}</span>
+                  )}
+                </div>
               </div>
             </div>
             <button
               onClick={handleClearFile}
-              className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="ml-1.5 p-0.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-all duration-200 flex-shrink-0"
               title="Remove file"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
           
-          <div className="mt-4 flex gap-2">
+          <div className="flex gap-1.5">
             <button
               onClick={handleUpload}
               disabled={disabled}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-sm transition-all duration-200 font-medium text-xs shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
               Start Upload
@@ -309,9 +358,9 @@ export function AudioUpload({
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+              className="px-2 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-sm transition-all duration-200 font-medium text-xs shadow-sm hover:shadow-md"
             >
-              Choose Different File
+              Change
             </button>
           </div>
         </div>
@@ -319,24 +368,24 @@ export function AudioUpload({
 
       {/* Upload Progress */}
       {isUploading && (
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-blue-900">
+        <div className="bg-gradient-to-r from-orange-50 to-orange-50/50 rounded-md p-2.5 border border-orange-200/50 shadow-sm">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-medium text-gray-900 truncate">
               Uploading {selectedFile?.name}...
             </span>
-            <span className="text-sm text-blue-700">{uploadProgress}%</span>
+            <span className="text-xs font-medium text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full ml-2">{uploadProgress}%</span>
           </div>
           
-          <div className="w-full bg-blue-200 rounded-full h-2 mb-4">
+          <div className="w-full bg-orange-200/50 rounded-full h-1 mb-1.5 overflow-hidden">
             <div 
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+              className="bg-gradient-to-r from-orange-500 to-orange-600 h-1 rounded-full transition-all duration-300 shadow-sm" 
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
           
           <button
             onClick={() => setShowConfirmCancel(true)}
-            className="text-blue-600 hover:text-blue-800 text-sm underline hover:no-underline transition-colors"
+            className="text-orange-600 hover:text-orange-800 text-xs underline hover:no-underline transition-colors font-medium"
           >
             Cancel Upload
           </button>

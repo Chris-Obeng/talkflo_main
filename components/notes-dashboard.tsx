@@ -10,8 +10,7 @@ import { useNotes } from "@/lib/hooks/use-notes";
 import { useToast } from "@/components/ui/toast";
 
 interface NotesDashboardProps {
-  onAppendToNote?: (noteId: string) => void;
-  onAppendFileToNote?: (noteId: string) => void;
+  onShowUpload?: () => void;
   onReady?: (api: {
     addNote: (note: Note) => void;
     upsertNote: (note: Note, placeAtTopIfNew?: boolean) => void;
@@ -24,7 +23,7 @@ interface NotesDashboardProps {
   onSelectionChange?: (count: number) => void;
 }
 
-export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, onSelectionChange }: NotesDashboardProps) {
+export function NotesDashboard({ onShowUpload, onReady, onSelectionChange }: NotesDashboardProps) {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
@@ -148,18 +147,6 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
     console.log('Duplicate note:', noteId);
   };
 
-  const handleAppendToNote = (noteId: string) => {
-    // Close modal and start recording
-    handleCloseModal();
-    onAppendToNote?.(noteId);
-  };
-
-  const handleAppendFileToNote = (noteId: string) => {
-    // Close modal and start file upload
-    handleCloseModal();
-    onAppendFileToNote?.(noteId);
-  };
-
   // Expose list manipulation API to parent so it can perform
   // optimistic inserts/updates without remounting the dashboard
   // (prevents the full "Loading your notes..." reload effect)
@@ -175,6 +162,27 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
       clearSelection: clearSelection,
     });
   }, [onReady, addNote, upsertNote, updateNote, removeNote, loadNotes, handleDeleteSelected, clearSelection]);
+
+  // Periodic cleanup of audio files for completed notes
+  React.useEffect(() => {
+    const cleanupInterval = setInterval(async () => {
+      try {
+        const completedNotesWithAudio = notes.filter(
+          note => note.status === 'completed' && note.audio_url
+        );
+        
+        if (completedNotesWithAudio.length > 0) {
+          console.log(`🗑️ Periodic cleanup: found ${completedNotesWithAudio.length} completed notes with audio files`);
+          const { batchCleanupAudioFiles } = await import('@/lib/audio-cleanup');
+          await batchCleanupAudioFiles(completedNotesWithAudio);
+        }
+      } catch (error) {
+        console.warn('🗑️ Periodic audio cleanup failed:', error);
+      }
+    }, 5 * 60 * 1000); // Run every 5 minutes
+
+    return () => clearInterval(cleanupInterval);
+  }, [notes]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -291,17 +299,30 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
       <div className="w-full">
         {/* Search Bar */}
         <div className="mb-8">
-          <div className="relative max-w-md mx-auto">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+          <div className="relative max-w-md mx-auto flex items-center gap-3">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search notes, content, and tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search notes, content, and tags..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
-            />
+            
+            {/* Upload Button */}
+            <button
+              onClick={onShowUpload}
+              className="w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center group flex-shrink-0"
+              title="Upload audio file"
+            >
+              <svg className="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </button>
           </div>
         </div>
         
@@ -332,27 +353,40 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
       <div className="w-full">
         {/* Search Bar */}
         <div className="mb-8">
-          <div className="relative max-w-md mx-auto">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+          <div className="relative max-w-md mx-auto flex items-center gap-3">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search notes, content, and tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:shadow-lg transition-all duration-200 text-gray-900 placeholder-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Search notes, content, and tags..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:shadow-lg transition-all duration-200 text-gray-900 placeholder-gray-500"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+            
+            {/* Upload Button */}
+            <button
+              onClick={onShowUpload}
+              className="w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center group flex-shrink-0"
+              title="Upload audio file"
+            >
+              <svg className="w-5 h-5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </button>
           </div>
           {searchQuery && (
             <p className="text-center text-sm text-gray-500 mt-3">
@@ -463,8 +497,6 @@ export function NotesDashboard({ onAppendToNote, onAppendFileToNote, onReady, on
         onClose={handleCloseModal}
         onDelete={handleDeleteNote}
         onDuplicate={handleDuplicateNote}
-        onAppendToNote={handleAppendToNote}
-        onAppendFileToNote={handleAppendFileToNote}
         onTagsUpdate={handleTagsUpdate}
         onNoteUpdate={(id, updated) => updateNote(id, updated)}
       />

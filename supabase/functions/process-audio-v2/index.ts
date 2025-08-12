@@ -538,6 +538,35 @@ Deno.serve(async (req: Request) => {
         throw new Error(`Failed to update note with processed content: ${updateError.message}`)
       }
 
+      // Step 5: Clean up audio file after successful processing
+      console.log('🗑️ === STEP 5: CLEANING UP AUDIO FILE ===')
+      try {
+        // Extract storage path from audio URL
+        const audioPath = audioUrl.split('/audio-files/')[1]
+        if (audioPath) {
+          console.log('🗑️ Deleting audio file:', audioPath)
+          const { error: deleteError } = await supabase
+            .storage
+            .from('audio-files')
+            .remove([audioPath])
+          
+          if (deleteError) {
+            console.warn('⚠️ Failed to delete audio file (non-critical):', deleteError.message)
+          } else {
+            console.log('✅ Audio file deleted successfully')
+            
+            // Clear the audio_url from the note since file is deleted
+            await supabase
+              .from('notes')
+              .update({ audio_url: null })
+              .eq('id', noteId)
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Audio cleanup failed (non-critical):', cleanupError)
+        // Don't fail the entire process if cleanup fails
+      }
+
       console.log('🎉 === PROCESSING COMPLETED SUCCESSFULLY ===')
       return new Response(JSON.stringify({
         success: true,

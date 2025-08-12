@@ -27,6 +27,12 @@ export function TalkfloMain() {
   } | null>(null);
 
   const handleStartRecording = async () => {
+    // Scroll to top smoothly when recording starts
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    
     // Trigger the recording widget; widget will immediately show
     // a preparing state while it requests permissions
     recordingWidgetRef.current?.startRecording();
@@ -41,27 +47,7 @@ export function TalkfloMain() {
     recordingWidgetRef.current?.showUploadDialog();
   };
 
-  const handleAppendToNote = (noteId: string) => {
-    // Set the note ID to append to and start recording
-    console.log('🔗 handleAppendToNote called with noteId:', noteId);
-    setAppendToNoteId(noteId);
-    appendToNoteIdRef.current = noteId;
-    // Also set it directly on the recording widget
-    recordingWidgetRef.current?.setAppendToNoteId(noteId);
-    console.log('🔗 appendToNoteId state and ref set to:', noteId);
-    handleStartRecording();
-  };
 
-  const handleAppendFileToNote = (noteId: string) => {
-    // Set the note ID to append to and show upload dialog
-    console.log('🔗 handleAppendFileToNote called with noteId:', noteId);
-    setAppendToNoteId(noteId);
-    appendToNoteIdRef.current = noteId;
-    // Also set it directly on the recording widget
-    recordingWidgetRef.current?.setAppendToNoteId(noteId);
-    console.log('🔗 appendToNoteId state and ref set to:', noteId);
-    recordingWidgetRef.current?.showUploadDialog();
-  };
 
   const handleRecordingStateChange = (state: 'idle' | 'preparing' | 'recording' | 'paused' | 'uploading' | 'processing' | 'file-uploading') => {
     setRecordingState(state);
@@ -112,6 +98,11 @@ export function TalkfloMain() {
                 // Insert the completed note smoothly at the top and ensure
                 // we have the freshest version from the server if needed
                 dashboardApiRef.current?.upsertNote(note, true);
+                
+                // Clean up audio file after successful processing (fallback cleanup)
+                import('@/lib/audio-cleanup').then(({ cleanupAudioFileIfCompleted }) => {
+                  cleanupAudioFileIfCompleted(note);
+                });
               } else if (note.status === 'failed') {
                 // No card until completed; ignore failed interim updates
               } else {
@@ -124,8 +115,7 @@ export function TalkfloMain() {
         {/* Notes Dashboard */}
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <NotesDashboard 
-            onAppendToNote={handleAppendToNote}
-            onAppendFileToNote={handleAppendFileToNote}
+            onShowUpload={handleShowUpload}
             onReady={(api) => {
               dashboardApiRef.current = api;
               dashboardActionsRef.current = {
@@ -138,40 +128,26 @@ export function TalkfloMain() {
         </div>
       </div>
 
-      {/* Floating Action Buttons - Bottom Middle (hide when recording, uploading, or processing) */}
+      {/* Floating Action Button - Bottom Middle (hide when recording, uploading, or processing) */}
       {recordingState === 'idle' && (
         <div className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300 ${hasSelectedNotes ? 'opacity-0' : 'opacity-100'}`}>
-          <div className="flex items-center gap-3">
-            {/* Upload Button */}
-            <button
-              onClick={handleShowUpload}
-              className="w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center group"
-              tabIndex={hasSelectedNotes ? -1 : 0}
-              title="Upload audio file"
-            >
-              <svg className="w-6 h-6 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            </button>
-            
-            {/* Record Button (Main) */}
-            <button
-              onClick={() => {
-                console.log('🔗 Record button clicked - clearing append state');
-                setAppendToNoteId(undefined); // Clear any append state for new recordings
-                appendToNoteIdRef.current = undefined;
-                recordingWidgetRef.current?.setAppendToNoteId(undefined);
-                handleStartRecording();
-              }}
-              className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl flex items-center justify-center group"
-              tabIndex={hasSelectedNotes ? -1 : 0}
-              title="Start recording"
-            >
-              <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </button>
-          </div>
+          {/* Record Button (Main) */}
+          <button
+            onClick={() => {
+              console.log('🔗 Record button clicked - clearing append state');
+              setAppendToNoteId(undefined); // Clear any append state for new recordings
+              appendToNoteIdRef.current = undefined;
+              recordingWidgetRef.current?.setAppendToNoteId(undefined);
+              handleStartRecording();
+            }}
+            className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 transition-all duration-200 shadow-xl hover:shadow-2xl flex items-center justify-center group"
+            tabIndex={hasSelectedNotes ? -1 : 0}
+            title="Start recording"
+          >
+            <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
         </div>
       )}
 

@@ -60,6 +60,12 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
 
     if (isCompleted) {
       console.log('✅ Processing completed!', processingNote);
+      
+      // Clean up audio file after successful processing
+      import('@/lib/audio-cleanup').then(({ cleanupAudioFileIfCompleted }) => {
+        cleanupAudioFileIfCompleted(processingNote);
+      });
+      
       setRecordingState('idle');
       setCurrentNoteId(null); // Stop monitoring this note
     } else if (hasFailed) {
@@ -451,28 +457,49 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Upload dialog state
   if (showUpload && recordingState === 'idle') {
     return (
-      <div className="flex justify-center px-4 sm:px-0">
-        <div className="bg-white rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 shadow-xl border border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Upload Audio File</h3>
+      <div className="flex justify-center px-4">
+        <div className="bg-gradient-to-br from-white to-orange-50/30 rounded-3xl px-8 py-6 w-96 shadow-xl border border-orange-100 relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100/40 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-orange-50/60 to-transparent rounded-full translate-y-12 -translate-x-12"></div>
+          
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Audio File</h3>
+              <p className="text-xs text-gray-600">Choose an audio file to transcribe</p>
+            </div>
             <button
               onClick={() => setShowUpload(false)}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
           
-          <AudioUpload
-            onUploadStart={handleFileUploadStart}
-            onUploadProgress={handleFileUploadProgress}
-            onUploadComplete={handleFileUploadComplete}
-            onUploadError={handleFileUploadError}
-            onUploadCancel={handleFileUploadCancel}
-            appendToNoteId={appendToNoteIdRef.current}
-          />
+          {/* Upload area */}
+          <div className="relative z-10">
+            <AudioUpload
+              onUploadStart={handleFileUploadStart}
+              onUploadProgress={handleFileUploadProgress}
+              onUploadComplete={handleFileUploadComplete}
+              onUploadError={handleFileUploadError}
+              onUploadCancel={handleFileUploadCancel}
+              appendToNoteId={appendToNoteIdRef.current}
+            />
+          </div>
+          
+          {/* Footer info */}
+          <div className="mt-4 pt-3 border-t border-orange-100/50 relative z-10">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <svg className="w-3 h-3 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Supports MP3, WAV, M4A and other audio formats</span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -481,8 +508,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // File uploading state
   if (recordingState === 'file-uploading') {
     return (
-      <div className="flex justify-center px-4 sm:px-0">
-        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4">
+        <div className="bg-orange-500 rounded-3xl px-8 py-6 w-96 text-center text-white relative shadow-xl">
           {/* Loading dots */}
           <div className="flex justify-center mb-6 space-x-2">
             <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
@@ -516,8 +543,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           </button>
 
           {showConfirmCancelFileUpload && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
-              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-left">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
                     <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -557,8 +584,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Upload state
   if (recordingState === 'uploading') {
     return (
-      <div className="flex justify-center px-4 sm:px-0">
-        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4">
+        <div className="bg-orange-500 rounded-3xl px-8 py-6 w-96 text-center text-white relative shadow-xl">
           {/* Loading dots */}
           <div className="flex justify-center mb-6 space-x-2">
             <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
@@ -592,8 +619,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           </button>
 
           {showConfirmCancelUpload && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
-              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-left">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
                     <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -628,8 +655,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
   // Processing state
   if (recordingState === 'processing') {
     return (
-      <div className="flex justify-center px-4 sm:px-0">
-        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4">
+        <div className="bg-orange-500 rounded-3xl px-8 py-6 w-96 text-center text-white relative shadow-xl">
           {/* Processing animation */}
           <div className="flex justify-center mb-6">
             <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
@@ -689,10 +716,10 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
     const isRecording = recordingState === 'recording';
     
     return (
-      <div className="flex justify-center px-4 sm:px-0">
-        <div className="bg-orange-500 rounded-3xl px-5 py-6 sm:px-12 sm:py-8 w-full max-w-sm sm:w-96 text-center text-white relative shadow-xl">
+      <div className="flex justify-center px-4">
+        <div className="bg-orange-500 rounded-3xl px-8 py-6 w-96 text-center text-white relative shadow-xl">
           {/* Countdown Timer */}
-          <div className={`text-2xl sm:text-3xl font-bold mb-6 tracking-wide ${getTimeWarningClass(recordingTime)}`}>
+          <div className={`text-3xl font-bold mb-6 tracking-wide ${getTimeWarningClass(recordingTime)}`}>
             {formatTime(recordingTime)}
           </div>
           
@@ -743,7 +770,7 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
             {/* Stop button */}
             <button 
               onClick={stopRecording}
-              className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg relative -mb-8"
+              className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg relative -mb-8"
               title="Stop recording"
             >
               <div className="w-5 h-5 bg-orange-500 rounded-sm"></div>
@@ -762,8 +789,8 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
           </div>
 
           {showConfirmCancelRecording && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50">
-              <div className="bg-white rounded-2xl p-6 w-[90%] max-w-sm sm:w-80 shadow-xl text-left">
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl text-left">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100">
                     <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

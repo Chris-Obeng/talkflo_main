@@ -78,9 +78,20 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     
     // Draw bars
     for (let i = 0; i < barCount; i++) {
-      // Sample frequency data (spread across the available data)
-      const dataIndex = Math.floor((i / barCount) * dataArray.length);
-      const amplitude = dataArray[dataIndex] / 255; // Normalize to 0-1
+      // Better frequency data sampling - ensure we use the full range
+      // Map bar index to frequency data index more evenly
+      const normalizedIndex = i / (barCount - 1); // 0 to 1
+      const dataIndex = Math.floor(normalizedIndex * (dataArray.length - 1));
+      
+      // Get amplitude and add some randomness for more dynamic visualization
+      let amplitude = dataArray[dataIndex] / 255; // Normalize to 0-1
+      
+      // Add some smoothing and ensure minimum activity
+      amplitude = Math.max(amplitude, 0.1 + Math.random() * 0.1);
+      
+      // Apply some frequency-based weighting (lower frequencies are more prominent)
+      const frequencyWeight = 1 - (normalizedIndex * 0.3); // Reduce amplitude for higher frequencies
+      amplitude *= frequencyWeight;
       
       // Calculate bar height with some smoothing
       const barHeight = minBarHeight + (amplitude * (maxBarHeight - minBarHeight));
@@ -161,17 +172,24 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     
     return (
       <div className="flex justify-center items-end space-x-1 h-20">
-        {Array.from({ length: 45 }).map((_, i) => (
-          <div
-            key={i}
-            className="w-1 bg-white/80 rounded-full animate-pulse"
-            style={{
-              height: `${Math.random() * 60 + 15}px`,
-              animationDelay: `${i * 0.05}s`,
-              animationDuration: `${0.8 + Math.random() * 0.4}s`
-            }}
-          />
-        ))}
+        {Array.from({ length: 45 }).map((_, i) => {
+          // Create a more realistic wave pattern
+          const baseHeight = 15 + Math.sin(i * 0.3) * 10;
+          const randomHeight = Math.random() * 40;
+          const totalHeight = baseHeight + randomHeight;
+          
+          return (
+            <div
+              key={i}
+              className="w-1 bg-white/80 rounded-full animate-pulse"
+              style={{
+                height: `${Math.max(10, Math.min(75, totalHeight))}px`,
+                animationDelay: `${(i * 0.03) % 2}s`,
+                animationDuration: `${0.6 + (Math.random() * 0.8)}s`
+              }}
+            />
+          );
+        })}
       </div>
     );
   };

@@ -16,7 +16,11 @@ export function FAQ() {
     },
     {
       question: "Is my voice data secure?",
-      answer: "Absolutely. Your voice recordings are processed in real-time and immediately deleted from our servers. We never store your audio files or personal conversations. All data transmission is encrypted, and we're SOC 2 compliant with enterprise-grade security measures."
+      answer: "Absolutely. Your voice recordings are processed in real-time and automatically deleted from our servers immediately after transcription is complete. We never permanently store your audio files or personal conversations. All data transmission is encrypted, and we're SOC 2 compliant with enterprise-grade security measures."
+    },
+    {
+      question: "What happens to my audio files after processing?",
+      answer: "Your audio files are automatically and permanently deleted from our servers within seconds of completing the transcription and AI processing. We only keep the processed text content that you can edit and organize. This ensures optimal privacy and helps us maintain efficient storage while keeping your costs low."
     },
     {
       question: "Can I edit the generated text?",
@@ -30,13 +34,10 @@ export function FAQ() {
       question: "What file formats do you support?",
       answer: "Talkflo accepts most common audio formats including MP3, WAV, M4A, and OGG. You can also record directly in our web app or mobile app. Output formats include plain text, Word documents, PDF, and various markdown formats."
     },
+
     {
-      question: "Is there a mobile app?",
-      answer: "Yes! Talkflo is available on iOS and Android with full feature parity. You can record on-the-go, and your transcriptions sync seamlessly across all your devices. The mobile app also includes offline recording capabilities."
-    },
-    {
-      question: "Can I integrate Talkflo with other tools?",
-      answer: "Talkflo includes integrations with popular tools like Google Docs, Notion, Slack, and more. Our API (coming soon) will allow custom integrations with your existing workflow and applications."
+      question: "Is Talkflo free to use?",
+      answer: "Yes! Talkflo is completely free to use. You can transcribe unlimited audio files, organize your notes, and access all features without any cost or subscription fees."
     }
   ];
 
@@ -50,7 +51,7 @@ export function FAQ() {
           </h2>
           <p className="text-xl text-slate-600">
             Everything you need to know about Talkflo. Can&apos;t find what you&apos;re looking for? 
-            <a href="#" className="text-orange-500 hover:text-orange-600 underline ml-1">
+            <a href="mailto:christopherobeng.dev@gmail.com" className="text-orange-500 hover:text-orange-600 underline ml-1">
               Contact our support team
             </a>.
           </p>
@@ -63,7 +64,7 @@ export function FAQ() {
               className="bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden transition-all duration-200"
             >
               <button
-                className="w-full text-left p-6 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-inset"
+                className="w-full text-left p-6 focus:outline-none"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
                 <div className="flex justify-between items-center">

@@ -19,6 +19,11 @@ export class ApiClient {
     onProgress?: (progress: number) => void
   ): Promise<{ success: boolean; noteId?: string; error?: string }> {
     try {
+      // Check if operation was aborted before starting
+      if (abortSignal?.aborted) {
+        throw new Error('Upload canceled')
+      }
+
       console.log('🔐 Checking authentication...');
       const { data: { user }, error: authError } = await this.supabase.auth.getUser()
       if (authError || !user) {
@@ -40,6 +45,11 @@ export class ApiClient {
       const randomSuffix = Math.random().toString(36).substring(7)
       const storagePath = `${user.id}/${Date.now()}-${randomSuffix}${fileExtension}`
 
+      // Check if operation was aborted before upload
+      if (abortSignal?.aborted) {
+        throw new Error('Upload canceled')
+      }
+
       // Start progress
       onProgress?.(0)
       console.log('📤 Uploading directly to Supabase Storage:', storagePath, 'type:', audioBlob.type, 'size:', audioBlob.size)
@@ -59,6 +69,14 @@ export class ApiClient {
       }
 
       console.log('📤 File uploaded to storage at:', uploadData?.path)
+      
+      // Check if operation was aborted after upload
+      if (abortSignal?.aborted) {
+        // Clean up uploaded file if operation was aborted
+        await this.supabase.storage.from('audio-files').remove([storagePath])
+        throw new Error('Upload canceled')
+      }
+      
       // Update progress to near-complete; DB ops follow
       onProgress?.(90)
 
@@ -362,6 +380,31 @@ export class ApiClient {
   }
 
   /**
+   * Clean up audio file after successful processing
+   */
+  async cleanupAudioFile(noteId: string): Promise<boolean> {
+    try {
+      console.log('🗑️ Cleaning up audio file for note:', noteId);
+      
+      const response = await fetch(`/api/notes/${noteId}/cleanup-audio`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.warn('🗑️ Audio cleanup failed:', response.status, response.statusText);
+        return false;
+      }
+
+      console.log('🗑️ Audio file cleanup successful');
+      return true;
+    } catch (error) {
+      console.error('🗑️ Error during audio cleanup:', error);
+      return false;
+    }
+  }
+
+  /**
    * Poll for note updates (for real-time processing status)
    * Simplified to avoid recursive API calls
    */
@@ -405,6 +448,14 @@ export class ApiClient {
         // Stop polling if completed or failed
         if (note.status === 'completed' || note.status === 'failed') {
           console.log('🔄 Polling stopped, final status:', note.status);
+          
+          // Clean up audio file if processing completed successfully
+          if (note.status === 'completed' && note.audio_url) {
+            this.cleanupAudioFile(noteId).catch(error => {
+              console.warn('🗑️ Audio cleanup failed (non-critical):', error);
+            });
+          }
+          
           return
         }
 
