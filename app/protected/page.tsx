@@ -1,14 +1,44 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+'use client'
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { TalkfloMain } from "@/components/talkflo-main";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { SupportModal } from "@/components/support-modal";
+import type { User } from "@supabase/supabase-js";
 
-export default async function ProtectedPage() {
-  const supabase = await createClient();
+export default function ProtectedPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    redirect("/auth/login");
+  useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) {
+        router.push("/auth/login");
+        return;
+      }
+      setUser(data.user);
+      setLoading(false);
+    };
+
+    getUser();
+  }, [router, supabase.auth]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f5f0eb] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -18,7 +48,7 @@ export default async function ProtectedPage() {
         <div className="w-full flex justify-between items-center px-6 py-3">
           {/* Left - User Avatar with Dropdown */}
           <div className="flex items-center">
-            <ProfileDropdown userEmail={data.user.email || ""}>
+            <ProfileDropdown userEmail={user.email || ""}>
               <button 
                 className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center hover:bg-slate-500 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-700"
                 type="button"
@@ -33,7 +63,10 @@ export default async function ProtectedPage() {
 
           {/* Center - Support Banner */}
           <div className="flex items-center gap-3">
-            <button className="bg-white rounded-full px-3 py-1 text-xs text-slate-700 font-semibold">
+            <button 
+              onClick={() => setIsSupportModalOpen(true)}
+              className="bg-white rounded-full px-3 py-1 text-xs text-slate-700 font-semibold hover:bg-gray-100 transition-colors"
+            >
               Support Talkflo
             </button>
             <span className="text-slate-300 text-sm font-normal hidden sm:inline">
@@ -50,6 +83,12 @@ export default async function ProtectedPage() {
 
       {/* Main Content */}
       <TalkfloMain />
+
+      {/* Support Modal - for manual access via header button */}
+      <SupportModal 
+        isOpen={isSupportModalOpen} 
+        onClose={() => setIsSupportModalOpen(false)} 
+      />
     </div>
   );
 }

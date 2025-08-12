@@ -21,10 +21,11 @@ interface RecordingWidgetProps {
   onStateChange?: (state: RecordingState) => void;
   onNoteCreated?: (noteId: string) => void;
   onNoteUpdated?: (note: Note) => void;
+  onNoteProcessingCompleted?: (note: Note) => void;
   appendToNoteId?: string;
 }
 
-export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated, appendToNoteId }, ref) => {
+export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetProps>(({ onStateChange, onNoteCreated, onNoteUpdated, onNoteProcessingCompleted, appendToNoteId }, ref) => {
   console.log('🎤 RecordingWidget rendered with appendToNoteId:', appendToNoteId);
   
   // Recording time limit configuration (10 minutes = 600 seconds)
@@ -65,6 +66,9 @@ export const RecordingWidget = forwardRef<RecordingWidgetRef, RecordingWidgetPro
       import('@/lib/audio-cleanup').then(({ cleanupAudioFileIfCompleted }) => {
         cleanupAudioFileIfCompleted(processingNote);
       });
+      
+      // Notify parent that processing is completed (for support modal)
+      onNoteProcessingCompleted?.(processingNote);
       
       setRecordingState('idle');
       setCurrentNoteId(null); // Stop monitoring this note

@@ -2,6 +2,7 @@
 
 import { RecordingWidget, RecordingWidgetRef } from "@/components/recording-widget";
 import { NotesDashboard } from "@/components/notes-dashboard";
+import { SupportModal } from "@/components/support-modal";
 
 import { useState, useRef } from "react";
 import type { Note } from "@/lib/types";
@@ -10,6 +11,7 @@ export function TalkfloMain() {
   const [recordingState, setRecordingState] = useState<'idle' | 'preparing' | 'recording' | 'paused' | 'uploading' | 'processing' | 'file-uploading'>('idle');
   const [hasSelectedNotes, setHasSelectedNotes] = useState(false);
   const [appendToNoteId, setAppendToNoteId] = useState<string | undefined>(undefined);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const appendToNoteIdRef = useRef<string | undefined>(undefined);
   const recordingWidgetRef = useRef<RecordingWidgetRef>(null);
   // Keep a reference to the dashboard list API so we can
@@ -67,6 +69,16 @@ export function TalkfloMain() {
     // The card will appear only when processing completes and content is ready.
   };
 
+  // Handle note processing completion - show support modal after delay
+  const handleNoteProcessingCompleted = (note: Note) => {
+    console.log('🎉 Note processing completed, showing support modal in 2 seconds:', note.id);
+    
+    // Wait 2 seconds before showing the support modal
+    setTimeout(() => {
+      setIsSupportModalOpen(true);
+    }, 2000);
+  };
+
 
 
   return (
@@ -90,6 +102,7 @@ export function TalkfloMain() {
             ref={recordingWidgetRef} 
             onStateChange={handleRecordingStateChange}
             onNoteCreated={handleNoteCreated}
+            onNoteProcessingCompleted={handleNoteProcessingCompleted}
             appendToNoteId={appendToNoteId}
             onNoteUpdated={(note) => {
               console.log('🔄 Note updated in main component:', note.id, note.status);
@@ -188,6 +201,12 @@ export function TalkfloMain() {
           </div>
         </div>
       )}
+
+      {/* Support Modal - shows after note processing completes */}
+      <SupportModal 
+        isOpen={isSupportModalOpen} 
+        onClose={() => setIsSupportModalOpen(false)} 
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { X, Trash2, Copy, Image as ImageIcon, Share2, Plus, FileText, Tag, ChevronDown, ChevronUp, Wand2, Expand, Minimize } from "lucide-react";
+import { X, Trash2, Copy, Image as ImageIcon, Share2, Plus, FileText, Tag, ChevronDown, ChevronUp, Wand2, Expand, Minimize, Maximize2 } from "lucide-react";
 import { Note, UITag, Tag as TagType } from "@/lib/types";
 import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
@@ -50,13 +50,9 @@ export function NoteModal({
   const { addToast } = useToast();
   // Keep a ref of current tags to compute updates across async boundaries
   const tagsRef = useRef<UITag[]>([]);
-  // Auto-save refs and timers
-  const titleSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const contentSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedTitleRef = useRef<string>("");
-  const lastSavedContentRef = useRef<string>("");
-  // Cursor position ref
+  // Cursor position ref and textarea ref
   const cursorPositionRef = useRef<number>(0);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Handle opening animation and initialize tags
   useEffect(() => {
@@ -76,10 +72,6 @@ export function NoteModal({
       setIsEditingContent(false);
       setLocalTitle(note?.title || "");
       setLocalContent(note?.processed_content || note?.original_transcript || "");
-      
-      // Initialize last saved values
-      lastSavedTitleRef.current = note?.title || "";
-      lastSavedContentRef.current = note?.processed_content || note?.original_transcript || "";
 
       // Fetch all user tags so we can link existing tags or create new ones
       (async () => {
@@ -283,226 +275,137 @@ export function NoteModal({
     }
   };
 
-  // Auto-save title with debouncing
-  const autoSaveTitle = useCallback(async (titleToSave: string) => {
-    if (!note) return;
-    const trimmedTitle = titleToSave.trim();
-    if (trimmedTitle === lastSavedTitleRef.current) return;
-    
-    setIsSavingTitle(true);
-    // Optimistic update
-    onNoteUpdate?.(note.id, { title: trimmedTitle });
-    const ok = await apiClient.updateNote(note.id, { title: trimmedTitle });
-    if (ok) {
-      lastSavedTitleRef.current = trimmedTitle;
-    } else {
-      addToast({ type: 'error', title: 'Failed to save title' });
-      // Revert
-      onNoteUpdate?.(note.id, { title: lastSavedTitleRef.current });
-      setLocalTitle(lastSavedTitleRef.current);
-    }
-    setIsSavingTitle(false);
-  }, [note, onNoteUpdate, addToast]);
-
-  // Save helpers for inline edits
+  // Save title function
   const saveTitle = useCallback(async () => {
     if (!note) return;
-    const nextTitle = (localTitle || "").trim();
-    if (nextTitle === lastSavedTitleRef.current) {
+    const trimmedTitle = localTitle.trim();
+    if (trimmedTitle === note.title) {
       setIsEditingTitle(false);
       return;
     }
     
-    // Clear any pending auto-save
-    if (titleSaveTimeoutRef.current) {
-      clearTimeout(titleSaveTimeoutRef.current);
-      titleSaveTimeoutRef.current = null;
-    }
+    setIsSavingTitle(true);
     
-    await autoSaveTitle(nextTitle);
-    setIsEditingTitle(false);
-  }, [note, localTitle, autoSaveTitle]);
+    const ok = await apiClient.updateNote(note.id, { title: trimmedTitle });
+    if (ok) {
+      // Update parent component
+      onNoteUpdate?.(note.id, { title: trimmedTitle });
+      addToast({ type: 'success', title: 'Title saved' });
+      setIsEditingTitle(false);
+    } else {
+      addToast({ type: 'error', title: 'Failed to save title' });
+      // Revert to original title
+      setLocalTitle(note.title);
+    }
+    setIsSavingTitle(false);
+  }, [note, localTitle, onNoteUpdate, addToast]);
 
   const cancelTitleEdit = useCallback(() => {
     if (!note) return;
-    // Clear any pending auto-save
-    if (titleSaveTimeoutRef.current) {
-      clearTimeout(titleSaveTimeoutRef.current);
-      titleSaveTimeoutRef.current = null;
-    }
-    setLocalTitle(lastSavedTitleRef.current);
+    setLocalTitle(note.title);
     setIsEditingTitle(false);
   }, [note]);
 
-  // Auto-save content with debouncing
-  const autoSaveContent = useCallback(async (contentToSave: string) => {
-    if (!note) return;
-    if (contentToSave === lastSavedContentRef.current) return;
-    
-    setIsSavingContent(true);
-    // Optimistic UI updates both local render and parent list
-    setRenderedContent(contentToSave);
-    onNoteUpdate?.(note.id, { processed_content: contentToSave });
-    const ok = await apiClient.updateNote(note.id, { processed_content: contentToSave });
-    if (ok) {
-      lastSavedContentRef.current = contentToSave;
-    } else {
-      addToast({ type: 'error', title: 'Failed to save content' });
-      // Revert local render to previous
-      setRenderedContent(lastSavedContentRef.current);
-      onNoteUpdate?.(note.id, { processed_content: lastSavedContentRef.current });
-      setLocalContent(lastSavedContentRef.current);
-    }
-    setIsSavingContent(false);
-  }, [note, onNoteUpdate, addToast]);
-
+  // Save content function
   const saveContent = useCallback(async () => {
     if (!note) return;
-    if (localContent === lastSavedContentRef.current) {
+    const currentContent = note.processed_content || note.original_transcript || "";
+    if (localContent === currentContent) {
       setIsEditingContent(false);
       return;
     }
     
-    // Clear any pending auto-save
-    if (contentSaveTimeoutRef.current) {
-      clearTimeout(contentSaveTimeoutRef.current);
-      contentSaveTimeoutRef.current = null;
-    }
+    setIsSavingContent(true);
     
-    await autoSaveContent(localContent);
-    setIsEditingContent(false);
-  }, [note, localContent, autoSaveContent]);
+    const ok = await apiClient.updateNote(note.id, { processed_content: localContent });
+    if (ok) {
+      // Update local render and parent component
+      setRenderedContent(localContent);
+      onNoteUpdate?.(note.id, { processed_content: localContent });
+      addToast({ type: 'success', title: 'Content saved' });
+      setIsEditingContent(false);
+    } else {
+      addToast({ type: 'error', title: 'Failed to save content' });
+      // Revert to original content
+      setLocalContent(currentContent);
+    }
+    setIsSavingContent(false);
+  }, [note, localContent, onNoteUpdate, addToast]);
 
   const cancelContentEdit = useCallback(() => {
     if (!note) return;
-    // Clear any pending auto-save
-    if (contentSaveTimeoutRef.current) {
-      clearTimeout(contentSaveTimeoutRef.current);
-      contentSaveTimeoutRef.current = null;
-    }
-    setLocalContent(lastSavedContentRef.current);
+    const currentContent = note.processed_content || note.original_transcript || "";
+    setLocalContent(currentContent);
     setIsEditingContent(false);
   }, [note]);
 
-  // Auto-save title when user stops typing (debounced)
-  useEffect(() => {
-    if (!isEditingTitle || !note) return;
-    
-    // Clear existing timeout
-    if (titleSaveTimeoutRef.current) {
-      clearTimeout(titleSaveTimeoutRef.current);
-    }
-    
-    // Set new timeout for auto-save
-    titleSaveTimeoutRef.current = setTimeout(() => {
-      const trimmedTitle = localTitle.trim();
-      if (trimmedTitle !== lastSavedTitleRef.current) {
-        autoSaveTitle(trimmedTitle);
-      }
-    }, 1000); // Save after 1 second of no typing
-    
-    return () => {
-      if (titleSaveTimeoutRef.current) {
-        clearTimeout(titleSaveTimeoutRef.current);
-      }
-    };
-  }, [localTitle, isEditingTitle, note, autoSaveTitle]);
 
-  // Auto-save content when user stops typing (debounced)
-  useEffect(() => {
-    if (!isEditingContent || !note) return;
-    
-    // Clear existing timeout
-    if (contentSaveTimeoutRef.current) {
-      clearTimeout(contentSaveTimeoutRef.current);
-    }
-    
-    // Set new timeout for auto-save
-    contentSaveTimeoutRef.current = setTimeout(() => {
-      if (localContent !== lastSavedContentRef.current) {
-        autoSaveContent(localContent);
-      }
-    }, 1000); // Save after 1 second of no typing
-    
-    return () => {
-      if (contentSaveTimeoutRef.current) {
-        clearTimeout(contentSaveTimeoutRef.current);
-      }
-    };
-  }, [localContent, isEditingContent, note, autoSaveContent]);
 
-  // Auto-resize textarea when editing content starts
-  useEffect(() => {
-    if (isEditingContent) {
-      const textarea = document.querySelector('textarea[data-content-editor="true"]') as HTMLTextAreaElement;
-      if (textarea) {
-        // Small delay to ensure the textarea is rendered
-        setTimeout(() => {
-          textarea.style.height = 'auto';
-          textarea.style.height = textarea.scrollHeight + 'px';
-        }, 0);
-      }
-    }
-  }, [isEditingContent]);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (titleSaveTimeoutRef.current) {
-        clearTimeout(titleSaveTimeoutRef.current);
-      }
-      if (contentSaveTimeoutRef.current) {
-        clearTimeout(contentSaveTimeoutRef.current);
-      }
-    };
+  // Simple auto-resize function without cursor interference
+  const autoResizeTextarea = useCallback((textarea: HTMLTextAreaElement) => {
+    if (!textarea) return;
+    
+    // Simple resize without cursor manipulation
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.max(textarea.scrollHeight, 60) + 'px';
   }, []);
+
+
 
   // Safe guard after all hooks to preserve hook order
   if (!shouldRender || !note) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-[100] overflow-y-auto flex items-start justify-center bg-black/60 transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[100] bg-black/60 transition-opacity duration-300 ${
         isClosing ? 'opacity-0' : 'opacity-100'
-      } ${isFullScreen ? 'p-0' : 'p-4'}`}
+      } ${isFullScreen ? 'p-0 overflow-hidden' : 'p-4 overflow-y-auto'}`}
       onClick={handleBackdropClick}
+      style={{ 
+        display: 'flex',
+        alignItems: isFullScreen ? 'stretch' : 'flex-start',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        paddingTop: isFullScreen ? '0' : '2rem',
+        paddingBottom: isFullScreen ? '0' : '2rem'
+      }}
     >
       {/* Modal Container */}
       <div
-        className={`relative w-full bg-white shadow-2xl transform transition-all duration-300 ease-in-out ${
+        className={`relative w-full bg-white shadow-2xl ${
           isClosing
             ? 'animate-out animate-collapse-up'
             : 'animate-in animate-collapse-down'
         } ${
           isFullScreen
-            ? 'max-w-full min-h-screen rounded-t-3xl'
+            ? 'max-w-full h-screen rounded-t-3xl overflow-hidden flex flex-col'
             : 'max-w-2xl my-8 rounded-3xl'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-          {/* Close Button */}
+          {/* Close/Expand Button */}
           {isFullScreen ? (
             <button
-              onClick={() => setIsFullScreen(false)}
-              className="absolute top-6 right-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-              aria-label="Exit full screen"
+              onClick={handleClose}
+              className="absolute top-4 right-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              aria-label="Close modal"
             >
-              <Minimize className="w-4 h-4 text-gray-600" />
+              <X className="w-4 h-4 text-gray-600" />
             </button>
           ) : (
             <button
               onClick={() => setIsFullScreen(true)}
-              className="absolute top-6 right-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="absolute top-4 right-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
               aria-label="Expand to full screen"
             >
-              <Expand className="w-4 h-4 text-gray-600" />
+              <Maximize2 className="w-4 h-4 text-gray-600" />
             </button>
           )}
 
           {/* Rewrite Button (top-left) */}
           <button
             onClick={() => setShowRewrite((v) => !v)}
-            className="absolute top-6 left-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+            className="absolute top-4 left-6 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
             aria-label="Rewrite with AI"
             title="Rewrite with AI"
           >
@@ -510,22 +413,21 @@ export function NoteModal({
           </button>
 
           {/* Content */}
-          <div className={`${isFullScreen ? 'min-h-full flex flex-col' : ''}`}>
+          <div className={`${isFullScreen ? 'flex-1 flex flex-col overflow-hidden' : ''}`}>
             {/* Header Section */}
-            <div className={`px-8 pt-8 pb-6 text-center ${isFullScreen ? 'lg:px-32 bg-gradient-to-b from-orange-50/30 to-transparent' : ''}`}>
+            <div className={`px-8 pt-8 pb-6 text-center ${isFullScreen ? 'lg:px-32 bg-gradient-to-b from-orange-50/30 to-transparent flex-shrink-0' : ''}`}>
             {/* Title (inline editable) */}
             <div className="mb-4">
-              <div className="relative inline-block w-full text-center">
+              {!isEditingTitle ? (
                 <h1
-                  className={`text-3xl font-bold text-gray-900 leading-tight cursor-text hover:bg-orange-50 px-1 rounded transition-opacity duration-75 ${
-                    isEditingTitle ? 'opacity-0' : 'opacity-100'
-                  }`}
+                  className="text-3xl font-bold text-gray-900 leading-tight cursor-text hover:bg-orange-50 px-2 py-1 rounded transition-colors duration-200 text-center"
                   title="Click to edit title"
                   onClick={() => setIsEditingTitle(true)}
                 >
-                  {isSavingTitle ? 'Saving…' : note.title}
+                  {note.title}
                 </h1>
-                {isEditingTitle && (
+              ) : (
+                <div className="space-y-3">
                   <input
                     value={localTitle}
                     onChange={(e) => setLocalTitle(e.target.value)}
@@ -538,12 +440,37 @@ export function NoteModal({
                         cancelTitleEdit();
                       }
                     }}
-                    onBlur={() => setIsEditingTitle(false)}
                     autoFocus
-                    className="absolute top-0 left-0 w-full text-center text-3xl font-bold text-gray-900 leading-tight bg-transparent border-none focus:outline-none focus:ring-0 px-1 rounded"
+                    className="w-full text-center text-3xl font-bold text-gray-900 leading-tight bg-white border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 px-3 py-2 rounded-lg"
+                    placeholder="Enter note title..."
+                    style={{ minHeight: '3.5rem' }}
                   />
-                )}
-              </div>
+                  
+                  {/* Save/Cancel Buttons */}
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={cancelTitleEdit}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveTitle}
+                      disabled={isSavingTitle}
+                      className={`px-4 py-2 text-sm text-white rounded-lg transition-colors flex items-center gap-2 ${
+                        isSavingTitle 
+                          ? 'bg-orange-400 cursor-not-allowed' 
+                          : 'bg-orange-500 hover:bg-orange-600'
+                      }`}
+                    >
+                      {isSavingTitle && (
+                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                      )}
+                      {isSavingTitle ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Status indicator */}
@@ -609,96 +536,95 @@ export function NoteModal({
             </div>
 
             {/* Content Section */}
-            <div className={`px-8 ${isFullScreen ? 'lg:px-32 flex-1 pb-0' : 'pb-8'}`}>
+            <div className={`px-8 ${isFullScreen ? 'lg:px-32 flex-1 overflow-y-auto pb-8' : 'pb-8'}`}>
             <div className="text-center mb-6">
               <div className="relative w-full">
-                <div
-                  className={`text-gray-700 text-lg leading-relaxed whitespace-pre-wrap text-left cursor-text hover:bg-orange-50 rounded p-1 transition-opacity duration-75 ${
-                    isEditingContent ? 'opacity-0' : 'opacity-100'
-                  }`}
-                  title="Click to edit content"
-                  onClick={(e) => {
-                    const currentDisplayed = renderedContent ?? note.processed_content ?? note.original_transcript ?? ''
-                    setLocalContent(currentDisplayed)
-                    
-                    // Calculate approximate cursor position based on click location
-                    const element = e.currentTarget;
-                    const rect = element.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const clickY = e.clientY - rect.top;
-                    
-                    // Get text content and approximate position
-                    const text = currentDisplayed;
-                    const lines = text.split('\n');
-                    
-                    // Estimate line height (approximate)
-                    const lineHeight = 28; // Based on text-lg and leading-relaxed
-                    const clickedLine = Math.floor(clickY / lineHeight);
-                    
-                    let position = 0;
-                    for (let i = 0; i < Math.min(clickedLine, lines.length - 1); i++) {
-                      position += lines[i].length + 1; // +1 for newline
-                    }
-                    
-                    // Estimate character position within the line
-                    if (clickedLine < lines.length) {
-                      const currentLine = lines[clickedLine] || '';
-                      const charWidth = 9; // Approximate character width
-                      const clickedChar = Math.floor(clickX / charWidth);
-                      position += Math.min(clickedChar, currentLine.length);
-                    }
-                    
-                    // Store the calculated position
-                    cursorPositionRef.current = Math.max(0, Math.min(position, text.length));
-                    
-                    setIsEditingContent(true)
-                  }}
-                >
-                  {isSavingContent
-                    ? 'Saving…'
-                    : (renderedContent ?? note.processed_content ?? note.original_transcript ?? 'No content available')}
-                </div>
-                {isEditingContent && (
-                  <textarea
-                    ref={(textarea) => {
-                      if (textarea) {
-                        // Focus and place cursor based on previously estimated position
-                        textarea.focus();
-                        const safePos = Math.max(0, Math.min(cursorPositionRef.current, textarea.value.length));
-                        setTimeout(() => {
-                          try {
-                            textarea.setSelectionRange(safePos, safePos);
-                          } catch {
-                            // ignore selection errors
-                          }
-                        }, 0);
-                      }
+                {!isEditingContent ? (
+                  <div
+                    className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap text-left cursor-text hover:bg-orange-50 rounded p-1 transition-colors duration-200"
+                    title="Click to edit content"
+                    onClick={() => {
+                      const currentDisplayed = renderedContent ?? note.processed_content ?? note.original_transcript ?? ''
+                      setLocalContent(currentDisplayed)
+                      // Set cursor to end of text for consistent behavior
+                      cursorPositionRef.current = currentDisplayed.length;
+                      setIsEditingContent(true)
                     }}
-                    data-content-editor="true"
-                    value={localContent}
-                    onChange={(e) => setLocalContent(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                        e.preventDefault();
-                        saveContent();
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        cancelContentEdit();
-                      }
-                    }}
-                    onBlur={() => setIsEditingContent(false)}
-                    className="absolute top-0 left-0 w-full text-gray-700 text-lg leading-relaxed bg-transparent border-none focus:outline-none focus:ring-0 resize-none whitespace-pre-wrap p-1 rounded overflow-hidden"
-                    style={{ 
-                      height: 'auto',
-                      minHeight: '1.5rem'
-                    }}
-                    onInput={(e) => {
-                      // Auto-resize textarea to match content
-                      const target = e.target as HTMLTextAreaElement;
-                      target.style.height = 'auto';
-                      target.style.height = target.scrollHeight + 'px';
-                    }}
-                  />
+                  >
+                    {isSavingContent
+                      ? 'Saving…'
+                      : (renderedContent ?? note.processed_content ?? note.original_transcript ?? 'No content available')}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <textarea
+                      ref={(textarea) => {
+                        textareaRef.current = textarea;
+                        if (textarea && !textarea.dataset.initialized) {
+                          // Mark as initialized to prevent re-initialization
+                          textarea.dataset.initialized = 'true';
+                          
+                          // Set initial height
+                          textarea.style.height = 'auto';
+                          textarea.style.height = Math.max(textarea.scrollHeight, 120) + 'px';
+                          
+                          // Focus and place cursor at end - only once
+                          textarea.focus();
+                          const textLength = textarea.value.length;
+                          textarea.setSelectionRange(textLength, textLength);
+                        }
+                      }}
+                      data-content-editor="true"
+                      value={localContent}
+                      onChange={(e) => {
+                        setLocalContent(e.target.value);
+                      }}
+                      onInput={(e) => {
+                        // Use onInput for resize to avoid conflicts with onChange
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = Math.max(target.scrollHeight, 120) + 'px';
+                      }}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault();
+                          saveContent();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          cancelContentEdit();
+                        }
+                      }}
+                      className="w-full text-gray-700 text-lg leading-relaxed bg-white border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 resize-none whitespace-pre-wrap p-3 rounded-lg"
+                      style={{ 
+                        minHeight: '120px'
+                      }}
+                      placeholder="Start typing your content..."
+                    />
+                    
+                    {/* Save/Cancel Buttons */}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={cancelContentEdit}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveContent}
+                        disabled={isSavingContent}
+                        className={`px-4 py-2 text-sm text-white rounded-lg transition-colors flex items-center gap-2 ${
+                          isSavingContent 
+                            ? 'bg-orange-400 cursor-not-allowed' 
+                            : 'bg-orange-500 hover:bg-orange-600'
+                        }`}
+                      >
+                        {isSavingContent && (
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                        )}
+                        {isSavingContent ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -734,7 +660,8 @@ export function NoteModal({
 
 
             {/* Tags Section */}
-            <div className={`mb-8 ${isFullScreen ? 'hidden' : ''}`}>
+            {!isFullScreen && (
+            <div className="mb-8">
               <div className="flex flex-wrap gap-2 mb-4">
                 {tags.map((tag, index) => (
                   <span
@@ -793,9 +720,11 @@ export function NoteModal({
                 )}
               </div>
             </div>
+            )}
 
             {/* Action Buttons */}
-            <div className={`flex justify-center gap-4 mb-6 ${isFullScreen ? 'hidden' : ''}`}>
+            {!isFullScreen && (
+            <div className="flex justify-center gap-4 mb-6">
               <button
                 onClick={handleDeleteClick}
                 className="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
@@ -828,118 +757,11 @@ export function NoteModal({
                 <Share2 className="w-5 h-5" />
               </button>
             </div>
-
+            )}
 
             </div>
 
-            {/* Full Screen Footer */}
-            {isFullScreen && (
-              <div className="mt-auto bg-gradient-to-t from-gray-50/80 to-transparent border-t border-gray-100/50 backdrop-blur-sm">
-                <div className="px-8 lg:px-32 py-6">
-                  {/* Action Buttons Row */}
-                  <div className="flex items-center justify-center gap-4 mb-4">
 
-                    
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleDeleteClick}
-                        className="flex items-center justify-center w-11 h-11 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 hover:scale-105"
-                        title="Delete note"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      
-                      <button
-                        onClick={handleDuplicateClick}
-                        className="flex items-center justify-center w-11 h-11 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all duration-200 hover:scale-105"
-                        title="Duplicate note"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      
-                      <button
-                        className="flex items-center justify-center w-11 h-11 rounded-full bg-green-50 hover:bg-green-100 text-green-600 hover:text-green-700 transition-all duration-200 hover:scale-105"
-                        title="Add image"
-                        aria-label="Add image"
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                      </button>
-                      
-                      <button
-                        onClick={handleShareClick}
-                        className="flex items-center justify-center w-11 h-11 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-600 hover:text-purple-700 transition-all duration-200 hover:scale-105"
-                        title="Share/Export"
-                      >
-                        <Share2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Tags Section */}
-                  <div className="flex flex-col items-center">
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap justify-center gap-2 mb-3">
-                        {tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-100 text-orange-800 text-xs rounded-full shadow-sm"
-                          >
-                            <Tag className="w-3 h-3" />
-                            {tag.name}
-                            <button
-                              onClick={() => handleRemoveTag(tag.name)}
-                              className="ml-1 hover:text-orange-900 transition-colors"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      {showTagInput ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={newTag}
-                            onChange={(e) => setNewTag(e.target.value)}
-                            onKeyDown={handleTagInputKeyPress}
-                            placeholder="Enter tag name"
-                            className="px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-sm"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleAddTag}
-                            disabled={isSavingTag || !newTag.trim()}
-                            className={`flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 ${isSavingTag || !newTag.trim() ? 'bg-orange-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white hover:scale-105'} text-white shadow-sm`}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowTagInput(false);
-                              setNewTag("");
-                            }}
-                            className="flex items-center justify-center w-9 h-9 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full transition-all duration-200 hover:scale-105 shadow-sm"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setShowTagInput(true)}
-                          className="flex items-center gap-2 border-2 border-dashed border-gray-300 hover:border-orange-400 text-gray-600 hover:text-orange-600 px-4 py-2 rounded-full text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add tags
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
     </div>
