@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
@@ -59,6 +60,9 @@ export const metadata: Metadata = {
     description: "Transform your spoken ideas into polished text instantly. AI-powered voice-to-text transcription.",
     images: ["/twitter-image"],
   },
+};
+
+export const viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b0f19" },
@@ -104,8 +108,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ToastProvider>
-            {/* Track SPA navigations for GA when configured */}
-            {gaId ? <GoogleAnalyticsTracker measurementId={gaId} /> : null}
+          {/* Track SPA navigations for GA when configured */}
+          {gaId ? (
+            <Suspense fallback={null}>
+              <GoogleAnalyticsTracker measurementId={gaId} />
+            </Suspense>
+          ) : null}
             {children}
           </ToastProvider>
         </ThemeProvider>
