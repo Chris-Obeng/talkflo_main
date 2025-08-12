@@ -94,7 +94,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 
                 {/* Emotional message */}
                 <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
-                  I'm building Talkflo to help people express their ideas better — but running this app takes time and money. If you've enjoyed using Talkflo, please consider buying me a coffee to keep it alive. Every bit counts 💛
+                  I&apos;m building Talkflo to help people express their ideas better — but running this app takes time and money. If you&apos;ve enjoyed using Talkflo, please consider buying me a coffee to keep it alive. Every bit counts 💛
                 </p>
               </div>
 
@@ -148,7 +148,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                       <Heart className="w-5 h-5 text-yellow-600 fill-current" />
                       <div className="text-left">
                         <div className="font-semibold text-gray-900">$20</div>
-                        <div className="text-sm text-gray-600">You're powering the future of Talkflo</div>
+                        <div className="text-sm text-gray-600">You&apos;re powering the future of Talkflo</div>
                       </div>
                     </div>
                     <div className="text-xs bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-full">

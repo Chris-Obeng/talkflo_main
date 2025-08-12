@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+
+// Removed unused state to satisfy lint rules
 
 interface GoogleSignInButtonProps {
   mode: "login" | "signup";
@@ -10,10 +11,8 @@ interface GoogleSignInButtonProps {
 }
 
 export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
     try {
       const supabase = createClient();
       
@@ -30,7 +29,6 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Failed to sign in with Google";
       onError?.(errorMessage);
-      setIsLoading(false);
     }
   };
 
