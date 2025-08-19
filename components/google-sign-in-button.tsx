@@ -3,8 +3,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-// Removed unused state to satisfy lint rules
-
 interface GoogleSignInButtonProps {
   mode: "login" | "signup";
   onError?: (error: string) => void;
@@ -38,7 +36,6 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
       variant="outline"
       className="w-full"
       onClick={handleGoogleSignIn}
-      disabled={true}
     >
       <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
         <path
@@ -58,7 +55,7 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
           fill="#EA4335"
         />
       </svg>
-      {`Continue with Google (Coming Soon)`}
+      {`Continue with Google`}
     </Button>
   );
 }
